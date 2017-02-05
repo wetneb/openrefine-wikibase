@@ -8,17 +8,8 @@ from typematcher import TypeMatcher
 
 from bottle import route, run, request, default_app, template, HTTPError
 from docopt import docopt
-import redis
 
-### CONFIG ###
-max_results = 20
-service_name = 'Wikidata Reconciliation for OpenRefine'
-
-wd_api_search_results = 10 # max 50
-
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-### END CONFIG ###
-
+from config import *
 
 headers = {
     'User-Agent':service_name,
