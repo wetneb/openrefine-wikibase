@@ -27,7 +27,11 @@ class LabelStore(object):
         If force is set to True, fetches all the items in the list,
         no matter if they are in the cache or not
         """
+        if not qids:
+            return {}
+
         result = {}
+
         if force:
             to_fetch = qids
         else:

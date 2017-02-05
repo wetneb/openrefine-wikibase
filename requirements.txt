@@ -4,3 +4,4 @@ bottle
 fuzzywuzzy
 python-Levenshtein
 redis
+SPARQLWrapper
