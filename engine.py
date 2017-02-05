@@ -12,14 +12,14 @@ class ReconcileEngine(object):
         self.item_store = ItemStore(redis_client)
         self.type_matcher = TypeMatcher(redis_client)
 
-    def wikidata_string_search(self, query_string):
+    def wikidata_string_search(self, query_string, num_results):
         r = requests.get(
             'https://www.wikidata.org/w/api.php',
             {'action':'query',
             'format':'json',
             'list':'search',
             'srnamespace':0,
-            'srlimit':wd_api_search_results,
+            'srlimit':num_results,
             'srsearch':query_string},
             headers=headers)
         resp = r.json()
@@ -32,7 +32,11 @@ class ReconcileEngine(object):
         for query_id, query in queries.items():
             if 'query' not in query:
                 raise ValueError('No "query" provided')
-            qids[query_id] = self.wikidata_string_search(query['query'])
+            num_results = int(query.get('limit') or default_num_results)
+            print(num_results)
+            num_results_before_filter = min([2*num_results, wd_api_max_search_results])
+            qids[query_id] = self.wikidata_string_search(query['query'],
+                                    num_results_before_filter)
             qids_to_prefetch |= set(qids[query_id])
 
         # Prefetch all items
@@ -61,9 +65,6 @@ class ReconcileEngine(object):
             raise ValueError('Invalid type_strict')
         if type(target_types) != list:
             target_types = [target_types]
-
-        # search using the target label as search string
-        ids = self.wikidata_string_search(search_string)
 
         # retrieve corresponding items
         items = self.item_store.get_items(ids)
@@ -146,7 +147,9 @@ class ReconcileEngine(object):
                 {'id':id, 'name':self.item_store.get_label(id, default_language)}
                     for id in scored_items[i]['type']]
 
-        return sorted(scored_items, key=lambda i: -i.get('score', 0))
+        ranked_items = sorted(scored_items, key=lambda i: -i.get('score', 0))
+        max_results = int(query.get('limit') or default_num_results)
+        return ranked_items[:max_results]
 
     def process_single_query(self, q):
         results = self.process_queries({'q':q})
