@@ -1,0 +1,6 @@
+requests
+docopt
+bottle
+fuzzywuzzy
+python-Levenshtein
+redis
