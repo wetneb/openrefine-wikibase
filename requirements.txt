@@ -5,3 +5,4 @@ fuzzywuzzy
 python-Levenshtein
 redis
 SPARQLWrapper
+requests_mock # for testing

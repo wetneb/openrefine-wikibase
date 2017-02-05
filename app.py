@@ -3,7 +3,7 @@ import bottle
 import json
 import requests
 from fuzzywuzzy import fuzz
-from labelstore import LabelStore
+from itemstore import ItemStore
 from typematcher import TypeMatcher
 
 from bottle import route, run, request, default_app, template, HTTPError
@@ -15,10 +15,24 @@ headers = {
     'User-Agent':service_name,
 }
 
-label_store = LabelStore(redis_client)
+item_store = ItemStore(redis_client)
 type_matcher = TypeMatcher(redis_client)
 
-def search_wikidata(query, default_language='en'):
+def wikidata_string_search(query_string):
+    r = requests.get(
+        'https://www.wikidata.org/w/api.php',
+        {'action':'query',
+         'format':'json',
+         'list':'search',
+         'srnamespace':0,
+         'srlimit':wd_api_search_results,
+         'srsearch':query_string},
+        headers=headers)
+    print(r.url)
+    resp = r.json()
+    return [item['title'] for item in resp.get('query', {}).get('search')]
+
+def reconcile(query, default_language='en'):
     print(query)
 
     search_string = query['query']
@@ -28,69 +42,30 @@ def search_wikidata(query, default_language='en'):
         target_types = [target_types]
 
     # search using the target label as search string
-    r = requests.get(
-        'https://www.wikidata.org/w/api.php',
-        {'action':'query',
-         'format':'json',
-         'list':'search',
-         'srnamespace':0,
-         'srlimit':wd_api_search_results,
-         'srsearch':search_string},
-        headers=headers)
-    print(r.url)
-    resp = r.json()
-    ids = [item['title'] for item in resp.get('query', {}).get('search')]
+    ids = wikidata_string_search(search_string)
 
     # retrieve corresponding items
-    r = requests.get(
-        'https://www.wikidata.org/w/api.php',
-        {'action':'wbgetentities',
-         'format':'json',
-         'ids':'|'.join(ids)})
-    resp = r.json()
-    items = resp.get('entities', {})
+    items = item_store.get_items(ids)
 
     # Add the label as "yet another property"
-    properties_with_label = [{'pid':'label','v':query['query']}]+properties
+    properties_with_label = [{'pid':'all_labels','v':query['query']}]+properties
 
     scored_items = []
     types_to_prefetch = set()
     for qid, item in items.items():
-        simplified = {'qid':qid}
 
         # Add labels
         labels = set()
         for lang, lang_label in item.get('labels', {}).items():
-            labels.add(lang_label['value'])
+            labels.add(lang_label)
 
         # Add aliases
-        for lang, lang_aliases in item.get('aliases', {}).items():
-            for lang_alias in lang_aliases:
-                labels.add(lang_alias['value'])
-        simplified['label'] = list(labels)
-
-        # Add other properties
-        prop_ids = ['P31'] # instance of
-        for prop in properties:
-            if 'pid' not in prop:
-                raise ValueError("Property id ('pid') not provided")
-            prop_ids.append(prop['pid'])
-
-        for prop_id in prop_ids:
-            claims = item.get('claims', {}).get(prop_id, [])
-            values = set()
-            for claim in claims:
-                val = claim.get('mainsnak', {}).get('datavalue', {}).get('value')
-                if type(val) == dict:
-                    if val.get('entity-type') == 'item':
-                        values.add(val.get('id'))
-                else:
-                    values.add(str(val))
-            simplified[prop_id] = list(values)
+        labels |= set(item['aliases'])
+        item['all_labels'] = list(labels)
 
         # Check the type if we have a type constraint
         if target_types:
-            current_types = simplified['P31']
+            current_types = item['P31']
             found = any([
                 any([
                     type_matcher.is_subclass(typ, target_type)
@@ -99,9 +74,6 @@ def search_wikidata(query, default_language='en'):
                 for target_type in target_types])
 
             if not found:
-                print("skipping item")
-                print(current_types)
-                print(simplified['label'])
                 continue
 
         # Compute per-property score
@@ -113,7 +85,7 @@ def search_wikidata(query, default_language='en'):
 
             maxscore = 0
             bestval = None
-            values = simplified.get(prop_id, [])
+            values = item.get(prop_id, [])
             for val in values:
                 curscore = matching_fun(val, ref_val)
                 if curscore > maxscore or bestval is None:
@@ -137,20 +109,20 @@ def search_wikidata(query, default_language='en'):
         scored['score'] = avg
 
         scored['id'] = qid
-        scored['name'] = scored['label'].get('best_value', '')
-        scored['type'] = simplified['P31']
-        types_to_prefetch |= set(simplified['P31'])
+        scored['name'] = scored['all_labels'].get('best_value', '')
+        scored['type'] = item.get('P31', [])
+        types_to_prefetch |= set(scored['type'])
         scored['match'] = avg > validation_threshold
 
         scored_items.append(scored)
 
     # Prefetch the labels for the types
-    label_store.prefetch_labels(list(types_to_prefetch), default_language)
+    item_store.get_items(list(types_to_prefetch))
 
     # Add the labels to the response
     for i in range(len(scored_items)):
         scored_items[i]['type'] = [
-            {'id':id, 'name':label_store.get_label(id, lang)}
+            {'id':id, 'name':item_store.get_label(id, default_language)}
                 for id in scored_items[i]['type']]
 
     return sorted(scored_items, key=lambda i: -i.get('score', 0))
@@ -159,7 +131,7 @@ def perform_query(q):
     type_strict = q.get('type_strict', 'any')
     if type_strict not in ['any','all','should']:
         raise ValueError('Invalid type_strict')
-    return search_wikidata(q)
+    return reconcile(q)
 
 @route('/api', method=['GET','POST'])
 def api():

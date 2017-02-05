@@ -1,0 +1,40 @@
+#   A basic travis.yml boilerplate for Django projects
+#
+#   The set-up assumes a postgreSQL database.
+#
+# Taken from https://gist.github.com/ndarville/3625246
+
+language: python
+
+
+python:
+  - 3.4
+
+services:
+  - redis
+
+sudo: false
+
+addons:
+    apt:
+       packages:
+       - libpython3-dev
+
+
+virtualenv:
+  system_site_packages: true
+
+install:
+  - pip install -r requirements.txt
+  - pip install coveralls
+
+before_script:
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+script:
+  - coverage run -m unittest tests
+
+after_success:
+  - coveralls
+
+
