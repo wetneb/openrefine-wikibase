@@ -1,5 +1,4 @@
-Wikidata reconciliation interface for OpenRefine [![Build
-Status](https://travis-ci.org/wetneb/openrefine-wikidata.svg?branch=master)](https://travis-ci.org/wetneb/openrefine-wikidata)
+Wikidata reconciliation interface for OpenRefine [![Build Status](https://travis-ci.org/wetneb/openrefine-wikidata.svg?branch=master)](https://travis-ci.org/wetneb/openrefine-wikidata)
 ================================================
 
 An instance of this endpoint can be found at:
