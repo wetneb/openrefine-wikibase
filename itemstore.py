@@ -113,6 +113,12 @@ class ItemStore(object):
             labels[lang] = lang_label['value']
         simplified['labels'] = labels
 
+        # Add descriptions
+        descriptions = {}
+        for lang, lang_label in item.get('descriptions', {}).items():
+            descriptions[lang] = lang_label['value']
+        simplified['descriptions'] = descriptions
+
         # Add aliases (we don't remember the language for these)
         aliases = set()
         for lang, lang_aliases in item.get('aliases', {}).items():

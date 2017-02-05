@@ -57,19 +57,21 @@ def api(args):
                 'type' : {
                     'service_url' : this_host,
                     'service_path' : '/suggest/type',
-#                    'flyout_service_url' : this_host+'/flyout'
                 },
                 'property' : {
                     'service_url' : this_host,
                     'service_path' : '/suggest/property',
-#                    'flyout_service_url' : this_host+'/flyout'
                 },
                 'entity' : {
                     'service_url' : this_host,
                     'service_path' : '/suggest/entity',
-#                    'flyout_service_url' : this_host+'/flyout'
                 }
-            }
+            },
+            'preview' : {
+                'url': this_host+'/preview?id={{id}}',
+                'width' : 100,
+                'height': 50,
+            },
         }
         return identify
 
@@ -89,10 +91,10 @@ def suggest_property(args):
 def suggest_property(args):
     return suggest.find_entity(args)
 
-@route('/flyout', method=['GET','POST'])
+@route('/preview', method=['GET','POST'])
 @jsonp
-def flyout(args):
-    return suggest.flyout(args)
+def preview(args):
+    return suggest.preview(args)
 
 @route('/')
 def home():
