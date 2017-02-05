@@ -12,6 +12,7 @@ class ReconcileEngineTest(unittest.TestCase):
 
     def query(self, query_string, **kwargs):
         kwargs['query'] = query_string
+        kwargs['type'] = kwargs.get('typ')
         return self.r.process_single_query(kwargs)
 
     def results(self, *args, **kwargs):
@@ -37,4 +38,16 @@ class ReconcileEngineTest(unittest.TestCase):
         self.assertTrue(
             len(self.results('Cluny', limit=20)) <= 20)
 
+    def test_type(self):
+        self.assertEqual(
+            self.best_match_id('Oxford', typ='Q3918'), # university
+            'Q34433')
+        self.assertEqual(
+            self.best_match_id('Oxford', typ='Q3957'), # town
+            'Q34217')
+
+    def test_forbidden_type(self):
+        self.assertEqual(
+            len(self.results('Category:Oxford')),
+            0)
 

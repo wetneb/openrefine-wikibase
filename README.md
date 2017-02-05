@@ -6,17 +6,18 @@ https://tools.wmflabs.org/openrefine-wikidata/api
 
 This is a new reconciliation interface, with the following features:
 * Matching columns with Wikidata properties, to improve the fuzzy
-  matching score
-* Relatively fast thanks to redis caching at various places, and few
-  calls to the Wikidata API and SPARQL endpoint
+  matching score ;
+* Optimized for speed with redis caching at various places, API calls
+  kept to the minimum ;
+* Autocomplete for properties and items.
 
 TODO:
 * Better scoring
-* Suggest API
 * Label language selection
 * Support for other modes of type matching
 * Updating the OpenRefine sources to use this interface by default
 * Docs
+* More expressive properties
 
 MIT license.
 

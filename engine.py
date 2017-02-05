@@ -11,6 +11,10 @@ class ReconcileEngine(object):
     def __init__(self, redis_client):
         self.item_store = ItemStore(redis_client)
         self.type_matcher = TypeMatcher(redis_client)
+        self.property_weight = 0.4
+        self.validation_threshold_discount_per_property = 5
+        self.avoid_type = 'Q17442446' # Wikimedia internal stuff
+
 
     def wikidata_string_search(self, query_string, num_results):
         r = requests.get(
@@ -58,12 +62,15 @@ class ReconcileEngine(object):
         """
         search_string = query['query']
         properties = query.get('properties', [])
-        target_types = query.get('type', [])
+        target_types = query.get('type') or []
         type_strict = query.get('type_strict', 'any')
         if type_strict not in ['any','all','should']:
             raise ValueError('Invalid type_strict')
         if type(target_types) != list:
             target_types = [target_types]
+
+        discounted_validation_threshold = (validation_threshold -
+            self.validation_threshold_discount_per_property * len(properties))
 
         # retrieve corresponding items
         items = self.item_store.get_items(ids)
@@ -85,17 +92,23 @@ class ReconcileEngine(object):
             item['all_labels'] = list(labels)
 
             # Check the type if we have a type constraint
+            current_types = item.get('P31', [])
             if target_types:
-                current_types = item.get('P31', [])
-                found = any([
+                good_type = any([
                     any([
                         self.type_matcher.is_subclass(typ, target_type)
                         for typ in current_types
                     ])
                     for target_type in target_types])
+            else: # Check if we should ignore this item
+                good_type = not any([
+                   self.type_matcher.is_subclass(typ, self.avoid_type)
+                   for typ in current_types
+                ])
 
-                if not found:
-                    continue
+            # If the type is invalid, skip the item
+            if not good_type:
+                continue
 
             # Compute per-property score
             scored = {}
@@ -113,18 +126,22 @@ class ReconcileEngine(object):
                         bestval = val
                         maxscore = curscore
 
+                weight = (1.0 if prop_id == 'all_labels'
+                          else self.property_weight)
                 scored[prop_id] = {
                     'values': values,
                     'best_value': bestval,
                     'score': maxscore,
+                    'weighted': weight*maxscore,
                 }
 
             # Compute overall score
-            nonzero_scores = [
-                prop['score'] for pid, prop in scored.items()
-                if prop['score'] > 0 ]
-            if nonzero_scores:
-                avg = sum(nonzero_scores) / float(len(nonzero_scores))
+            sum_scores = sum([
+                prop['weighted'] for pid, prop in scored.items()
+                ])
+            total_weight = self.property_weight*len(properties) + 1.0
+            if sum_scores:
+                avg = sum_scores / total_weight
             else:
                 avg = 0
             scored['score'] = avg
@@ -133,9 +150,11 @@ class ReconcileEngine(object):
             scored['name'] = scored['all_labels'].get('best_value', '')
             scored['type'] = item.get('P31', [])
             types_to_prefetch |= set(scored['type'])
-            scored['match'] = avg > validation_threshold
+            scored['match'] = avg > discounted_validation_threshold
 
             scored_items.append(scored)
+            if scored['match']:
+                break
 
         # Prefetch the labels for the types
         self.item_store.get_items(list(types_to_prefetch))
