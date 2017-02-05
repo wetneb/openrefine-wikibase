@@ -15,12 +15,6 @@ services:
 
 sudo: false
 
-addons:
-    apt:
-       packages:
-       - libpython3-dev
-
-
 virtualenv:
   system_site_packages: true
 
