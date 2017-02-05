@@ -1,15 +1,25 @@
 <!doctype html>
 <html>
 	<head>
-		<title>WD reconcile</title>
+		<title>OpenRefine-Wikidata interface</title>
 		<meta charset="utf-8" />
+		<link rel="stylesheet"
+href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+crossorigin="anonymous">
 	</head>
-	<body>
-		<h3>Wikidata reconcile for OpenRefine</h3>
-		<form action="/api" method="get">
-			<textarea name="query">
-			</textarea><br />
-			<input type="submit" />
-		</form>
+	<body style="padding: 100px">
+		<h1><a href="https://www.wikidata.org/wiki/Wikidata:Main_Page">Wikidata</a>
+			reconciliation for <a href="http://openrefine.org/">OpenRefine</a></h1>
+		<p class="lead">This web service can be used to align datasets to Wikidata items in OpenRefine.</p>
+
+		<p>Use the following URL in OpenRefine: <a
+href="https://tools.wmflabs.org/openrefine-wikidata/api">https://tools.wmflabs.org/openrefine-wikidata/api</a>.</p>
+		
+		<ul>
+			<li><a href="https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API">Documentation</a></li>
+			<li><a href="https://github.com/wetneb/openrefine-wikidata">Source</a></li>
+			<li><a href="https://github.com/wetneb/openrefine-wikidata/issues">Bug tracker</a></li>
+		</ul>
 	</body>
 </html>
