@@ -33,7 +33,6 @@ class ReconcileEngine(object):
             if 'query' not in query:
                 raise ValueError('No "query" provided')
             num_results = int(query.get('limit') or default_num_results)
-            print(num_results)
             num_results_before_filter = min([2*num_results, wd_api_max_search_results])
             qids[query_id] = self.wikidata_string_search(query['query'],
                                     num_results_before_filter)

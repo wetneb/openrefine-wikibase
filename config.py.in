@@ -5,6 +5,9 @@ max_results = 20
 # Service name exposed at various places
 service_name = 'DEV Wikidata Reconciliation for OpenRefine'
 
+# URL (without the trailing slash) where this server runs
+this_host = 'http://localhost:8000'
+
 # The default limit on the number of results returned by us
 default_num_results = 10
 

@@ -5,43 +5,94 @@ import json
 from bottle import route, run, request, default_app, template, HTTPError
 from docopt import docopt
 from engine import ReconcileEngine
+from suggest import SuggestEngine
 
 from config import *
 
-engine = ReconcileEngine(redis_client)
+reconcile = ReconcileEngine(redis_client)
+suggest = SuggestEngine(redis_client)
+
+def jsonp(view):
+    def wrapped():
+        args = {}
+        # if we access the args via get(),
+        # we can get encoding errors…
+        for k in request.forms:
+            args[k] = getattr(request.forms, k)
+        for k in request.query:
+            args[k] = getattr(request.query, k)
+        callback = args.get('callback')
+        try:
+            result =  view(args)
+        except (ValueError, AttributeError, KeyError) as e:
+            result = {'status':'error',
+                    'message':'invalid query',
+                    'details': str(e)}
+        if callback:
+            return '%s(%s);' % (callback, json.dumps(result))
+        else:
+            return result
+    return wrapped
 
 @route('/api', method=['GET','POST'])
-def api():
-    callback = request.query.get('callback') or request.forms.get('callback')
-    query = request.query.get('query') or request.forms.get('query')
-    queries = request.query.get('queries') or request.forms.queries
+@jsonp
+def api(args):
+    query = args.get('query')
+    queries = args.get('queries')
 
     if query:
-        try:
-            query = json.loads(query)
-            return engine.process_single_query(query)
-        except ValueError as e:
-            return {'status':'error',
-                    'message':'invalid query',
-                    'details': str(e)}
+        query = json.loads(query)
+        return reconcile.process_single_query(query)
+
     elif queries:
-        try:
-            queries = json.loads(queries)
-            return engine.process_queries(queries)
-        except (ValueError, AttributeError, KeyError) as e:
-            print(e)
-            return {'status':'error',
-                    'message':'invalid query',
-                    'details': str(e)}
+        queries = json.loads(queries)
+        res = reconcile.process_queries(queries)
+        return res
 
     else:
         identify = {
             'name':service_name,
             'view':{'url':'https://www.wikidata.org/wiki/{{id}}'},
+            'suggest' : {
+                'type' : {
+                    'service_url' : this_host,
+                    'service_path' : '/suggest/type',
+#                    'flyout_service_url' : this_host+'/flyout'
+                },
+                'property' : {
+                    'service_url' : this_host,
+                    'service_path' : '/suggest/property',
+#                    'flyout_service_url' : this_host+'/flyout'
+                },
+                'entity' : {
+                    'service_url' : this_host,
+                    'service_path' : '/suggest/entity',
+#                    'flyout_service_url' : this_host+'/flyout'
+                }
             }
-        if callback:
-            return '%s(%s);' % (callback, json.dumps(identify))
+        }
         return identify
+
+
+@route('/suggest/type', method=['GET','POST'])
+@jsonp
+def suggest_property(args):
+    return suggest.find_type(args)
+
+@route('/suggest/property', method=['GET','POST'])
+@jsonp
+def suggest_property(args):
+    return suggest.find_property(args)
+
+@route('/suggest/entity', method=['GET','POST'])
+@jsonp
+def suggest_property(args):
+    return suggest.find_entity(args)
+
+@route('/flyout', method=['GET','POST'])
+@jsonp
+def flyout(args):
+    return suggest.flyout(args)
 
 @route('/')
 def home():
