@@ -4,6 +4,7 @@ import json
 import requests
 from fuzzywuzzy import fuzz
 from labelstore import LabelStore
+from typematcher import TypeMatcher
 
 from bottle import route, run, request, default_app, template, HTTPError
 from docopt import docopt
@@ -24,12 +25,16 @@ headers = {
 }
 
 label_store = LabelStore(redis_client)
+type_matcher = TypeMatcher(redis_client)
 
 def search_wikidata(query, default_language='en'):
     print(query)
 
     search_string = query['query']
     properties = query.get('properties', [])
+    target_types = query.get('type', [])
+    if type(target_types) != list:
+        target_types = [target_types]
 
     # search using the target label as search string
     r = requests.get(
@@ -91,6 +96,22 @@ def search_wikidata(query, default_language='en'):
                 else:
                     values.add(str(val))
             simplified[prop_id] = list(values)
+
+        # Check the type if we have a type constraint
+        if target_types:
+            current_types = simplified['P31']
+            found = any([
+                any([
+                    type_matcher.is_subclass(typ, target_type)
+                    for typ in current_types
+                ])
+                for target_type in target_types])
+
+            if not found:
+                print("skipping item")
+                print(current_types)
+                print(simplified['label'])
+                continue
 
         # Compute per-property score
         scored = {}
@@ -156,7 +177,7 @@ def api():
     queries = request.query.get('queries') or request.forms.queries
     print(queries)
     if query:
-        #try:
+        try:
             query = json.loads(query)
             result = [perform_query(query)]
             return {'result':result}
@@ -176,7 +197,6 @@ def api():
                     'details': str(e)}
 
     else:
-        # Todo add callback
         identify = {
             'name':service_name,
             'view':{'url':'https://www.wikidata.org/wiki/{{id}}'},

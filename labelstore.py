@@ -8,7 +8,7 @@ class LabelStore(object):
     """
     def __init__(self, redis_client):
         self.r = redis_client
-        self.prefix = 'openrefine_wikidata_labels'
+        self.prefix = 'openrefine_wikidata:labels'
         self.ttl = 60*60 # one hour
 
     def get_label(self, qid, lang):
