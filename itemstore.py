@@ -38,6 +38,8 @@ class ItemStore(object):
         """
         if not qids:
             return {}
+        if type(qids) != list:
+            qids = list(qids)
 
         result = {}
         to_fetch = set()

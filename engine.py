@@ -25,11 +25,40 @@ class ReconcileEngine(object):
         resp = r.json()
         return [item['title'] for item in resp.get('query', {}).get('search')]
 
-    def reconcile(self, query, default_language='en'):
+    def process_queries(self, queries, default_language='en'):
+        # Fetch all candidate qids for each query
+        qids = {}
+        qids_to_prefetch = set()
+        for query_id, query in queries.items():
+            if 'query' not in query:
+                raise ValueError('No "query" provided')
+            qids[query_id] = self.wikidata_string_search(query['query'])
+            qids_to_prefetch |= set(qids[query_id])
 
+        # Prefetch all items
+        self.item_store.get_items(qids_to_prefetch)
+
+        # Perform each query
+        result = {}
+        for query_id, query in queries.items():
+            result[query_id] = {
+                'result':self._rank_items(query,qids[query_id], default_language)
+            }
+
+        return result
+
+    def _rank_items(self, query, ids, default_language):
+        """
+        Given a query and candidate qids returned from the search API,
+        return the list of fleshed-out items from these QIDs, filtered
+        and ranked.
+        """
         search_string = query['query']
         properties = query.get('properties', [])
         target_types = query.get('type', [])
+        type_strict = query.get('type_strict', 'any')
+        if type_strict not in ['any','all','should']:
+            raise ValueError('Invalid type_strict')
         if type(target_types) != list:
             target_types = [target_types]
 
@@ -57,7 +86,7 @@ class ReconcileEngine(object):
 
             # Check the type if we have a type constraint
             if target_types:
-                current_types = item['P31']
+                current_types = item.get('P31', [])
                 found = any([
                     any([
                         self.type_matcher.is_subclass(typ, target_type)
@@ -119,10 +148,8 @@ class ReconcileEngine(object):
 
         return sorted(scored_items, key=lambda i: -i.get('score', 0))
 
-    def perform_query(self, q):
-        type_strict = q.get('type_strict', 'any')
-        if type_strict not in ['any','all','should']:
-            raise ValueError('Invalid type_strict')
-        return self.reconcile(q)
+    def process_single_query(self, q):
+        results = self.process_queries({'q':q})
+        return results['q']
 
 

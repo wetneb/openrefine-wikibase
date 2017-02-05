@@ -15,12 +15,11 @@ def api():
     callback = request.query.get('callback') or request.forms.get('callback')
     query = request.query.get('query') or request.forms.get('query')
     queries = request.query.get('queries') or request.forms.queries
-    print(queries)
+
     if query:
         try:
             query = json.loads(query)
-            result = [engine.perform_query(query)]
-            return {'result':result}
+            return engine.process_single_query(query)
         except ValueError as e:
             return {'status':'error',
                     'message':'invalid query',
@@ -28,8 +27,7 @@ def api():
     elif queries:
         try:
             queries = json.loads(queries)
-            result = { k:{'result':engine.perform_query(q)} for k, q in queries.items() }
-            return result
+            return engine.process_queries(queries)
         except (ValueError, AttributeError, KeyError) as e:
             print(e)
             return {'status':'error',
