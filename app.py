@@ -140,7 +140,7 @@ def search_wikidata(query, default_language='en'):
         scored['name'] = scored['label'].get('best_value', '')
         scored['type'] = simplified['P31']
         types_to_prefetch |= set(simplified['P31'])
-        scored['match'] = False
+        scored['match'] = avg > validation_threshold
 
         scored_items.append(scored)
 

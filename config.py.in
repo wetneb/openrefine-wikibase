@@ -1,0 +1,17 @@
+import redis
+
+max_results = 20
+
+# Service name exposed at various places
+service_name = 'DEV Wikidata Reconciliation for OpenRefine'
+
+# The number of search results to retrieve from the Wikidata search API
+wd_api_search_results = 10 # max 50
+
+# The matching score above which we should automatically match an item
+validation_threshold = 95
+
+
+redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+
+
