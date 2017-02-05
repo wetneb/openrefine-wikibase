@@ -32,9 +32,8 @@ class ReconcileEngineTest(unittest.TestCase):
         self.assertEqual(
             len(self.results('Cluny', limit=1)),
             1)
-        self.assertEqual(
-            len(self.results('Cluny', limit=3)),
-            3)
+        self.assertTrue(
+            len(self.results('Cluny', limit=3)) <= 3)
         self.assertTrue(
             len(self.results('Cluny', limit=20)) <= 20)
 
