@@ -9,7 +9,7 @@ service_name = 'DEV Wikidata Reconciliation for OpenRefine'
 default_num_results = 10
 
 # The maximum number of search results to retrieve from the Wikidata search API
-wd_max_api_search_results = 50 # you need a bot account to get more
+wd_api_max_search_results = 50 # you need a bot account to get more
 
 # The matching score above which we should automatically match an item
 validation_threshold = 95
