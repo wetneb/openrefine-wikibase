@@ -69,8 +69,8 @@ def api(args):
             },
             'preview' : {
                 'url': this_host+'/preview?id={{id}}',
-                'width' : 100,
-                'height': 50,
+                'width' : preview_width,
+                'height': preview_height,
             },
         }
         return identify

@@ -25,3 +25,33 @@ headers = {
     'User-Agent':service_name,
 }
 
+# Previewing settings
+
+# Dimensions of the preview
+preview_height = 90
+preview_width = 320
+
+# With which should be requested from Commons for the thumbnail
+thumbnail_width = 130
+
+# All properties to use to get an image
+image_properties = [
+    'P18',
+    'P14',
+    'P15',
+    'P158',
+    'P181',
+    'P242',
+    'P1766',
+    'P1801',
+    'P1846',
+    'P2713',
+    'P2716',
+    'P2910',
+    'P3311',
+    'P3383',
+    'P3451',
+    'P1621',
+    'P154',
+]
+
