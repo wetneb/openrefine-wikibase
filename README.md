@@ -16,7 +16,6 @@ TODO:
 * Label language selection
 * Support for other modes of type matching
 * Updating the OpenRefine sources to use this interface by default
-* Docs
 * More expressive properties
 
 MIT license.

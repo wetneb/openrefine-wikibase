@@ -101,6 +101,11 @@ def home():
     with open('templates/index.html', 'r') as f:
         return template(f.read())
 
+@route('/static/<fname>')
+def static(fname):
+    return bottle.static_file(fname, root='static/')
+
+
 if __name__ == '__main__':
     run(host='localhost', port=8000, debug=True)
 
