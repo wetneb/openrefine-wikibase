@@ -33,7 +33,7 @@ def search_wikidata(query, default_language='en'):
         {'action':'query',
          'format':'json',
          'list':'search',
-         'namespace':0,
+         'srnamespace':0,
          'srlimit':wd_api_search_results,
          'srsearch':search_string},
         headers=headers)
