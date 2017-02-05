@@ -21,6 +21,7 @@ install:
 
 before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
+  - cp config.py.in config.py
 
 script:
   - coverage run -m unittest tests
