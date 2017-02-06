@@ -70,10 +70,6 @@ class SuggestEngine(object):
         r.raise_for_status()
         resp = r.json()
 
-        prefixlen = len(prefix)
-        props = [p['title'][prefixlen:]
-                    for p in resp.get('query',{}).get('search',{})]
-
         search_results = resp.get('search',[])
 
         result = [
