@@ -13,11 +13,11 @@ class SuggestEngineTest(unittest.TestCase):
     def query(self, typ, query_string, **kwargs):
         kwargs['prefix'] = query_string
         if typ == 'type':
-            return self.r.suggest_type(kwargs)
+            return self.s.find_type(kwargs)
         elif typ == 'property':
-            return self.r.suggest_property(kwargs)
+            return self.s.find_property(kwargs)
         elif typ == 'entity':
-            return self.r.suggest_entity(kwargs)
+            return self.s.find_entity(kwargs)
 
     def results(self, *args, **kwargs):
         return self.query(*args, **kwargs)['result']
@@ -34,4 +34,9 @@ class SuggestEngineTest(unittest.TestCase):
         self.assertEqual(
             self.best_match_id('property', 'Ringgold identifier'),
             'P3500')
+
+    def test_sparql(self):
+        self.assertEqual(
+            self.best_match_id('property', 'P17/P297'),
+            'P17/P297')
 

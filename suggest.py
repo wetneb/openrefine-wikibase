@@ -4,6 +4,7 @@ from config import image_properties
 import requests
 from bottle import template
 import hashlib
+import re
 
 def commons_image_url(filename):
     filename = filename.replace(' ', '_')
@@ -17,6 +18,7 @@ def commons_image_url(filename):
 class SuggestEngine(object):
     def __init__(self, redis_client):
         self.r = redis_client
+        self.property_path_re = re.compile(r'(SPARQL ?:? ?)?(P\d+(/P\d+){1,2})$')
         self.store = ItemStore(self.r)
         self.store.ttl = 24*60*60 # one day
         with open('templates/preview.html') as f:
@@ -83,6 +85,11 @@ class SuggestEngine(object):
         return self.find_something(args)
 
     def find_property(self, args):
+        # Check first if we are dealing with a path
+        s = (args.get('prefix') or '').strip()
+        match = self.property_path_re.match(s)
+        if match:
+            return {'result':[{'id':match.group(2),'name':'SPARQL: '+match.group(2)}]}
         return self.find_something(args, 'property', "Property:")
 
     def find_entity(self, args):
