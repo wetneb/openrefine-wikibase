@@ -31,6 +31,11 @@ class ReconcileEngineTest(unittest.TestCase):
             self.best_match_id('Recumbent bicycle'),
             'Q750483')
 
+    def test_empty(self):
+        self.assertEqual(
+            self.results(''),
+            [])
+
     def test_limit(self):
         self.assertEqual(
             len(self.results('Cluny', limit=1)),
@@ -44,9 +49,9 @@ class ReconcileEngineTest(unittest.TestCase):
         self.assertEqual(
             self.best_match_id('Oxford', typ='Q3918'), # university
             'Q34433')
-        self.assertEqual(
+        self.assertNotEqual(
             self.best_match_id('Oxford', typ='Q3957'), # town
-            'Q34217')
+            'Q34433')
 
     def test_forbidden_type(self):
         self.assertEqual(

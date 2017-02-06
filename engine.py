@@ -29,7 +29,7 @@ class ReconcileEngine(object):
             'srsearch':query_string},
             headers=headers)
         resp = r.json()
-        return [item['title'] for item in resp.get('query', {}).get('search')]
+        return [item['title'] for item in resp.get('query', {}).get('search', [])]
 
     def process_queries(self, queries, default_language='en'):
         # Fetch all candidate qids for each query
