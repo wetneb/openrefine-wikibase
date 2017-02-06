@@ -209,8 +209,8 @@ class ReconcileEngine(object):
         max_results = int(query.get('limit') or default_num_results)
         return ranked_items[:max_results]
 
-    def process_single_query(self, q):
-        results = self.process_queries({'q':q})
+    def process_single_query(self, q, default_language='en'):
+        results = self.process_queries({'q':q}, default_language)
         return results['q']
 
 

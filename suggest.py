@@ -1,4 +1,5 @@
 from itemstore import ItemStore
+from language import language_fallback as lngfb
 from config import preview_height, preview_width, thumbnail_width
 from config import image_properties
 import requests
@@ -40,18 +41,18 @@ class SuggestEngine(object):
         images = list(self.get_image_statements(item))
         if images:
             return (commons_image_url(images[0]),
-                    item.get('labels',{}).get(lang,id))
+                    lngfb(item.get('labels'), lang) or id)
 
     def preview(self, args):
         id = args['id']
         item = self.store.get_item(id)
-        lang = args.get('lang', 'en')
+        lang = args.get('lang')
         image = self.get_image_for_item(item, lang)
 
         args = {
             'id':id,
-            'label':item.get('labels', {}).get(lang, id),
-            'description': item.get('descriptions', {}).get(lang, ''),
+            'label': lngfb(item.get('labels'), lang) or id,
+            'description': lngfb(item.get('descriptions'), lang) or '',
             'image': image,
             'url': 'https://www.wikidata.org/entity/'+id,
             'width': preview_width,
@@ -60,8 +61,15 @@ class SuggestEngine(object):
         return template(self.preview_template,
             **args)
 
+    def get_label(self, item, target_lang):
+        typ = item.get('match', {}).get('type')
+        lang = item.get('match', {}).get('language')
+        if typ == 'label' and lang == target_lang:
+            return item['match']['text']
+        return item['label']
+
     def find_something(self, args, typ='item', prefix=''):
-        lang = args.get('lang', 'en')
+        lang = args.get('lang')
         r = requests.get('https://www.wikidata.org/w/api.php',
                 {'action':'wbsearchentities',
                  'format':'json',
@@ -69,14 +77,16 @@ class SuggestEngine(object):
                  'search':args['prefix'],
                  'language':lang,
                  })
+        print(r.url)
         r.raise_for_status()
         resp = r.json()
 
         search_results = resp.get('search',[])
 
         result = [
-            {'id':item['id'],
-             'name':item['label'],
+            {
+             'id': item['id'],
+             'name': self.get_label(item, lang),
             }
             for item in search_results]
         return {'result':result}

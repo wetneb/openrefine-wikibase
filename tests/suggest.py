@@ -25,6 +25,9 @@ class SuggestEngineTest(unittest.TestCase):
     def best_match_id(self, *args, **kwargs):
         return self.results(*args, **kwargs)[0]['id']
 
+    def preview(self, **kwargs):
+        return self.s.preview(kwargs)
+
     # Tests start here
 
     def test_exact(self):
@@ -39,4 +42,8 @@ class SuggestEngineTest(unittest.TestCase):
         self.assertEqual(
             self.best_match_id('property', 'P17/P297'),
             'P17/P297')
+
+    def test_custom_language(self):
+        self.assertTrue('ville' in
+            self.preview(id='Q350',lang='fr'))
 
