@@ -35,6 +35,9 @@ class SuggestEngineTest(unittest.TestCase):
             self.best_match_id('entity', 'Recumbent bicycle'),
             'Q750483')
         self.assertEqual(
+            self.best_match_id('entity', 'Vélo couché', lang='fr'),
+            'Q750483')
+        self.assertEqual(
             self.best_match_id('property', 'Ringgold identifier'),
             'P3500')
 
@@ -46,4 +49,9 @@ class SuggestEngineTest(unittest.TestCase):
     def test_custom_language(self):
         self.assertTrue('ville' in
             self.preview(id='Q350',lang='fr'))
+
+class CommonsImageTest(unittest.TestCase):
+
+    def test_commons_url(self):
+        self.assertTrue(commons_image_url('Wikidata-logo-en.svg').endswith('.png'))
 

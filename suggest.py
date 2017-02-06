@@ -1,7 +1,7 @@
 from itemstore import ItemStore
 from language import language_fallback as lngfb
 from config import preview_height, preview_width, thumbnail_width
-from config import image_properties
+from config import image_properties, this_host
 import requests
 from bottle import template
 import hashlib
@@ -12,9 +12,12 @@ def commons_image_url(filename):
     m = hashlib.md5()
     m.update(filename.encode('utf-8'))
     hashed = m.hexdigest()
-    return (
+    base_fname = (
         'https://upload.wikimedia.org/wikipedia/commons/thumb/%s/%s/%s/%dpx-%s' %
         (hashed[0], hashed[0:2], filename, thumbnail_width, filename))
+    if filename.lower().endswith('.svg'):
+        base_fname += '.png'
+    return base_fname
 
 class SuggestEngine(object):
     def __init__(self, redis_client):
@@ -42,6 +45,8 @@ class SuggestEngine(object):
         if images:
             return (commons_image_url(images[0]),
                     lngfb(item.get('labels'), lang) or id)
+        else:
+            return (this_host + '/static/wikidata.png', 'Wikidata')
 
     def preview(self, args):
         id = args['id']
@@ -69,7 +74,7 @@ class SuggestEngine(object):
         return item['label']
 
     def find_something(self, args, typ='item', prefix=''):
-        lang = args.get('lang')
+        lang = args.get('lang', 'en')
         r = requests.get('https://www.wikidata.org/w/api.php',
                 {'action':'wbsearchentities',
                  'format':'json',
@@ -77,7 +82,6 @@ class SuggestEngine(object):
                  'search':args['prefix'],
                  'language':lang,
                  })
-        print(r.url)
         r.raise_for_status()
         resp = r.json()
 
