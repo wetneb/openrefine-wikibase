@@ -9,14 +9,14 @@ This is a new reconciliation interface, with the following features:
   matching score ;
 * Optimized for speed with redis caching at various places, API calls
   kept to the minimum ;
-* Autocomplete for properties and items.
+* Autocomplete for properties and items ;
+* Support for SPARQL-like property paths such as "P17/P297" (which fetches the ISO code of the country of an item).
 
 TODO:
-* Better scoring
-* Label language selection
-* Support for other modes of type matching
-* Updating the OpenRefine sources to use this interface by default
-* More expressive properties
+* Better scoring ;
+* Label language selection ;
+* Support for other modes of type matching ;
+* Updating the OpenRefine sources to use this interface by default.
 
 MIT license.
 
