@@ -195,8 +195,6 @@ class ReconcileEngine(object):
             scored['match'] = avg > discounted_validation_threshold
 
             scored_items.append(scored)
-            if scored['match']:
-                break
 
         # Prefetch the labels for the types
         self.item_store.get_items(list(types_to_prefetch))
