@@ -1,8 +1,10 @@
 from config import *
 import requests
+import itertools
 from fuzzywuzzy import fuzz
 from itemstore import ItemStore
 from typematcher import TypeMatcher
+from utils import to_q
 
 class ReconcileEngine(object):
     """
@@ -54,6 +56,54 @@ class ReconcileEngine(object):
 
         return result
 
+    def prepare_property(self, prop):
+        """
+        Converts a property to RDF paths
+        """
+        pid = prop['pid']
+        path = [pid]
+        if '/' in pid:
+            path = pid.split('/')
+        prop['path'] = path
+        return prop
+
+
+    def resolve_property_path(self, path, item):
+        """
+        Returns the values matching the given path,
+        starting on the item
+        """
+        return list(set(self._resolve_property_path(path, item)))
+
+    def _resolve_property_path(self, path, item):
+        # Check if it as item
+        if type(item) != dict:
+            item = str(item)
+            qid = to_q(item)
+            if qid:
+                item = self.item_store.get_item(qid)
+
+        if not path:
+            if type(item) == dict: # this is an item
+                # return all labels and aliases
+                return itertools.chain(
+                    item.get('labels', {}).values(),
+                    item.get('aliases', []))
+            else: # this is a value
+                return [item]
+
+        # otherwise we want to step into the item
+
+        if type(item) != dict:
+            return [] # we can't step into a value
+
+        pid = path[0]
+        remaining = path[1:]
+        return itertools.chain(*[
+            self.resolve_property_path(remaining, child)
+            for child in item.get(pid, [])
+        ])
+
     def _rank_items(self, query, ids, default_language):
         """
         Given a query and candidate qids returned from the search API,
@@ -76,21 +126,13 @@ class ReconcileEngine(object):
         items = self.item_store.get_items(ids)
 
         # Add the label as "yet another property"
-        properties_with_label = [{'pid':'all_labels','v':query['query']}]+properties
+        properties_with_label = list(map(self.prepare_property, properties))
+        properties_with_label.append({'pid':'all_labels','v':query['query'],
+                                      'path':[]})
 
         scored_items = []
         types_to_prefetch = set()
         for qid, item in items.items():
-
-            # Add labels
-            labels = set()
-            for lang, lang_label in item.get('labels', {}).items():
-                labels.add(lang_label)
-
-            # Add aliases
-            labels |= set(item['aliases'])
-            item['all_labels'] = list(labels)
-
             # Check the type if we have a type constraint
             current_types = item.get('P31', [])
             if target_types:
@@ -119,7 +161,7 @@ class ReconcileEngine(object):
 
                 maxscore = 0
                 bestval = None
-                values = item.get(prop_id, [])
+                values = list(self.resolve_property_path(prop['path'], item))
                 for val in values:
                     curscore = matching_fun(val, ref_val)
                     if curscore > maxscore or bestval is None:

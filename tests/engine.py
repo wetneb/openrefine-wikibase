@@ -21,6 +21,9 @@ class ReconcileEngineTest(unittest.TestCase):
     def best_match_id(self, *args, **kwargs):
         return self.results(*args, **kwargs)[0]['id']
 
+    def item(self, id):
+        return self.r.item_store.get_item(id)
+
     # Tests start here
 
     def test_exact(self):
@@ -49,4 +52,35 @@ class ReconcileEngineTest(unittest.TestCase):
         self.assertEqual(
             len(self.results('Category:Oxford')),
             0)
+
+    def test_prepare_property(self):
+        self.assertDictEqual(
+            self.r.prepare_property({'pid':'P17/P297','v':'FR'}),
+            {'path':['P17','P297'],'v':'FR','pid':'P17/P297'})
+
+    def test_resolve_property_path(self):
+        self.assertEqual(
+            list(self.r.resolve_property_path(
+            ['P297'],
+            self.item('Q142'))),
+            ['FR'])
+
+        self.assertEqual(
+            list(self.r.resolve_property_path(
+            ['P17', 'P297'],
+            self.item('Q83259'))),
+            ['FR'])
+
+
+        self.assertTrue(
+            'France' in
+            self.r.resolve_property_path(
+            ['P17'],
+            self.item('Q83259')))
+
+        self.assertTrue(
+            'International Journal of Medical Sciences' in
+            self.r.resolve_property_path(
+            ['P1433'],
+            self.item('Q24791449')))
 
