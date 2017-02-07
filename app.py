@@ -93,21 +93,29 @@ def api(args):
 @route('/suggest/type', method=['GET','POST'])
 @jsonp
 def suggest_property(args):
+    if 'lang' not in args:
+        args['lang'] = 'en'
     return suggest.find_type(args)
 
 @route('/suggest/property', method=['GET','POST'])
 @jsonp
 def suggest_property(args):
+    if 'lang' not in args:
+        args['lang'] = 'en'
     return suggest.find_property(args)
 
 @route('/suggest/entity', method=['GET','POST'])
 @jsonp
 def suggest_property(args):
+    if 'lang' not in args:
+        args['lang'] = 'en'
     return suggest.find_entity(args)
 
 @route('/preview', method=['GET','POST'])
 @jsonp
 def preview(args):
+    if 'lang' not in args:
+        args['lang'] = 'en'
     return suggest.preview(args)
 
 @route('/<lang>/suggest/type', method=['GET','POST'])
