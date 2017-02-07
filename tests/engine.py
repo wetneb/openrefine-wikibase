@@ -26,6 +26,8 @@ class ReconcileEngineTest(unittest.TestCase):
 
     # Tests start here
 
+    # TODO add tests for matching decision
+
     def test_exact(self):
         self.assertEqual(
             self.best_match_id('Recumbent bicycle'),

@@ -1,6 +1,6 @@
 
 import unittest
-from suggest import SuggestEngine
+from suggest import SuggestEngine, commons_image_url
 from config import redis_client
 
 class SuggestEngineTest(unittest.TestCase):

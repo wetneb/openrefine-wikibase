@@ -15,6 +15,7 @@ class ReconcileEngine(object):
         self.type_matcher = TypeMatcher(redis_client)
         self.property_weight = 0.4
         self.validation_threshold_discount_per_property = 5
+        self.match_score_gap = 10
         self.avoid_type = 'Q17442446' # Wikimedia internal stuff
 
 
@@ -192,7 +193,7 @@ class ReconcileEngine(object):
             scored['name'] = scored['all_labels'].get('best_value', '')
             scored['type'] = item.get('P31', [])
             types_to_prefetch |= set(scored['type'])
-            scored['match'] = avg > discounted_validation_threshold
+            scored['match'] = False # will be changed later
 
             scored_items.append(scored)
 
@@ -206,6 +207,15 @@ class ReconcileEngine(object):
                     for id in scored_items[i]['type']]
 
         ranked_items = sorted(scored_items, key=lambda i: -i.get('score', 0))
+
+        if ranked_items:
+            # Decide if we trust the first match
+            next_score = ranked_items[1]['score'] if len(scored_items) > 1 else 0
+            current_score = ranked_items[0]['score']
+            ranked_items[0]['match'] = (
+                current_score > discounted_validation_threshold and
+                current_score > next_score + self.match_score_gap)
+
         max_results = int(query.get('limit') or default_num_results)
         return ranked_items[:max_results]
 
