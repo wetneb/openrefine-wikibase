@@ -15,8 +15,7 @@ This is a new reconciliation interface, with the following features:
   language code).
 
 TODO:
-* Better scoring ;
-* Updating the OpenRefine sources to use this interface by default.
+* Better scoring.
 
 MIT license.
 
