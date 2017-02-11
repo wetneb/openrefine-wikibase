@@ -1,16 +1,19 @@
 
 import bottle
 import json
+import time
 
 from bottle import route, run, request, default_app, template, HTTPError
 from docopt import docopt
 from engine import ReconcileEngine
 from suggest import SuggestEngine
+from monitoring import Monitoring
 
 from config import *
 
 reconcile = ReconcileEngine(redis_client)
 suggest = SuggestEngine(redis_client)
+monitoring = Monitoring(redis_client)
 
 def jsonp(view):
     def wrapped(*posargs, **kwargs):
@@ -34,6 +37,8 @@ def jsonp(view):
             return result
     return wrapped
 
+
+
 @route('/api', method=['GET','POST'])
 @jsonp
 def api_default_lang(args):
@@ -51,16 +56,22 @@ def api(args):
     query = args.get('query')
     queries = args.get('queries')
     lang = args.get('lang','en')
+    start_time = time.time()
 
     if query:
         query = json.loads(query)
-        return reconcile.process_single_query(query,
+        result = reconcile.process_single_query(query,
                 default_language=lang)
+        processing_time = time.time() - start_time
+        monitoring.log_request(1, processing_time)
+        return result
 
     elif queries:
         queries = json.loads(queries)
         res = reconcile.process_queries(queries,
                 default_language=lang)
+        processing_time = time.time() - start_time
+        monitoring.log_request(len(queries), processing_time)
         return res
 
     else:
@@ -147,12 +158,18 @@ def preview(args, lang):
 @route('/')
 def home():
     with open('templates/index.html', 'r') as f:
-        return template(f.read())
+        context = {
+            'service_status_url': this_host+'/monitoring',
+        }
+        return template(f.read(), **context)
 
 @route('/static/<fname>')
 def static(fname):
     return bottle.static_file(fname, root='static/')
 
+@route('/monitoring')
+def monitor():
+    return {'stats':monitoring.get_rates()}
 
 if __name__ == '__main__':
     run(host='localhost', port=8000, debug=True)
