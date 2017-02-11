@@ -37,8 +37,6 @@ def jsonp(view):
             return result
     return wrapped
 
-
-
 @route('/api', method=['GET','POST'])
 @jsonp
 def api_default_lang(args):
@@ -153,7 +151,10 @@ def preview(args, lang):
     args['lang'] = lang
     return suggest.preview(args)
 
-
+@route('/fetch_values', method=['GET','POST'])
+@jsonp
+def fetch_values(args):
+    return reconcile.fetch_values(args)
 
 @route('/')
 def home():

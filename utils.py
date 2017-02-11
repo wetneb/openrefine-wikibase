@@ -11,6 +11,8 @@ def to_q(url):
     >>> to_q('<http://www.wikidata.org/entity/Q801> ')
     u'Q801'
     """
+    if type(url) != str:
+        return
     match = q_re.match(url.strip())
     if match:
         return match.group(2)

@@ -91,3 +91,9 @@ class ReconcileEngineTest(unittest.TestCase):
             ['P1433'],
             self.item('Q24791449')))
 
+        # Without resolving labels
+        self.assertEqual(['Q145'],
+                    self.r.resolve_property_path(
+                        ['P17'],
+                        'Q34433',
+                        False))

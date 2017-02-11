@@ -18,6 +18,29 @@ class ReconcileEngine(object):
         self.match_score_gap = 10
         self.avoid_type = 'Q17442446' # Wikimedia internal stuff
 
+    def fetch_values(self, args):
+        """
+        Endpoint allowing clients to fetch the values associated
+        to an item and a property path.
+        """
+        qid = to_q(args.get('item'))
+        if not qid:
+            raise ValueError('No item provided')
+        prop = args.get('prop')
+        if not prop:
+            raise ValueError('No property provided')
+        path = self.prepare_property({'pid':prop})['path']
+
+        item = self.item_store.get_item(qid)
+        values = self.resolve_property_path(path, item,
+                (args.get('label') or 'true') == 'true')
+        if args.get('flat') == 'true':
+            if values:
+                return values[0]
+            else:
+                return ''
+        else:
+            return {'item':qid, 'prop':prop, 'values':values}
 
     def wikidata_string_search(self, query_string, num_results):
         r = requests.get(
@@ -68,20 +91,22 @@ class ReconcileEngine(object):
         prop['path'] = path
         return prop
 
-
-    def resolve_property_path(self, path, item):
+    def resolve_property_path(self, path, item, fetch_labels=True):
         """
         Returns the values matching the given path,
         starting on the item
-        """
-        return list(set(self._resolve_property_path(path, item)))
 
-    def _resolve_property_path(self, path, item):
+        :param fetch_labels: True if we should return the labels of
+                             an item instead of its Q id.
+        """
+        return list(set(self._resolve_property_path(path, item, fetch_labels)))
+
+    def _resolve_property_path(self, path, item, fetch_labels):
+        qid = to_q(item)
+
         # Check if it as item
         if type(item) != dict:
-            item = str(item)
-            qid = to_q(item)
-            if qid:
+            if qid and (path or fetch_labels):
                 item = self.item_store.get_item(qid)
 
         if not path:
@@ -101,7 +126,7 @@ class ReconcileEngine(object):
         pid = path[0]
         remaining = path[1:]
         return itertools.chain(*[
-            self.resolve_property_path(remaining, child)
+            self.resolve_property_path(remaining, child, fetch_labels)
             for child in item.get(pid, [])
         ])
 
@@ -162,7 +187,8 @@ class ReconcileEngine(object):
 
                 maxscore = 0
                 bestval = None
-                values = list(self.resolve_property_path(prop['path'], item))
+                ref_qid = to_q(ref_val)
+                values = list(self.resolve_property_path(prop['path'], item, fetch_labels=ref_qid is None))
                 for val in values:
                     curscore = matching_fun(val, ref_val)
                     if curscore > maxscore or bestval is None:
