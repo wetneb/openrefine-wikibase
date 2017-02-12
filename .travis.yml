@@ -22,10 +22,10 @@ install:
 before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
   - cp config.py.in config.py
-  - ls
+  - pwd
 
 script:
-  - coverage run --omit=virtualenv/* -m unittest tests
+  - coverage run --omit=/home/travis/virtualenv/* -m unittest tests
 
 after_success:
   - coveralls
