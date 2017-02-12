@@ -1,6 +1,6 @@
 import re
 
-q_re = re.compile(r'(<?http://www.wikidata.org/entity/)?(Q[0-9]+)>?')
+q_re = re.compile(r'(<?https?://www.wikidata.org/entity/)?(Q[0-9]+)>?')
 
 def to_q(url):
     """

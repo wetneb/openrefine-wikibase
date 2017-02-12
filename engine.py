@@ -5,6 +5,8 @@ from fuzzywuzzy import fuzz
 from itemstore import ItemStore
 from typematcher import TypeMatcher
 from utils import to_q
+import re
+from unidecode import unidecode
 
 class ReconcileEngine(object):
     """
@@ -17,30 +19,22 @@ class ReconcileEngine(object):
         self.validation_threshold_discount_per_property = 5
         self.match_score_gap = 10
         self.avoid_type = 'Q17442446' # Wikimedia internal stuff
+        self.identifier_re = re.compile(r'\d+')
 
-    def fetch_values(self, args):
+    def match_strings(self, ref, val):
         """
-        Endpoint allowing clients to fetch the values associated
-        to an item and a property path.
+        Returns the matching score of two values.
         """
-        qid = to_q(args.get('item'))
-        if not qid:
-            raise ValueError('No item provided')
-        prop = args.get('prop')
-        if not prop:
-            raise ValueError('No property provided')
-        path = self.prepare_property({'pid':prop})['path']
-
-        item = self.item_store.get_item(qid)
-        values = self.resolve_property_path(path, item,
-                (args.get('label') or 'true') == 'true')
-        if args.get('flat') == 'true':
-            if values:
-                return values[0]
-            else:
-                return ''
-        else:
-            return {'item':qid, 'prop':prop, 'values':values}
+        if not ref or not val:
+            return 0
+        if (self.identifier_re.match(ref) and
+            self.identifier_re.match(val)):
+            return 100 if ref == val else 0
+        ref_q = to_q(ref)
+        val_q = to_q(val)
+        if ref_q or val_q:
+            return 100 if ref_q == val_q else 0
+        return fuzz.token_sort_ratio(unidecode(val).lower(), unidecode(ref).lower())
 
     def wikidata_string_search(self, query_string, num_results):
         r = requests.get(
@@ -79,6 +73,30 @@ class ReconcileEngine(object):
             }
 
         return result
+
+    def fetch_values(self, args):
+        """
+        Endpoint allowing clients to fetch the values associated
+        to an item and a property path.
+        """
+        qid = to_q(args.get('item'))
+        if not qid:
+            raise ValueError('No item provided')
+        prop = args.get('prop')
+        if not prop:
+            raise ValueError('No property provided')
+        path = self.prepare_property({'pid':prop})['path']
+
+        item = self.item_store.get_item(qid)
+        values = self.resolve_property_path(path, item,
+                (args.get('label') or 'true') == 'true')
+        if args.get('flat') == 'true':
+            if values:
+                return values[0]
+            else:
+                return ''
+        else:
+            return {'item':qid, 'prop':prop, 'values':values}
 
     def prepare_property(self, prop):
         """
@@ -180,7 +198,6 @@ class ReconcileEngine(object):
 
             # Compute per-property score
             scored = {}
-            matching_fun = fuzz.ratio
             for prop in properties_with_label:
                 prop_id = prop['pid']
                 ref_val = prop['v']
@@ -190,7 +207,7 @@ class ReconcileEngine(object):
                 ref_qid = to_q(ref_val)
                 values = list(self.resolve_property_path(prop['path'], item, fetch_labels=ref_qid is None))
                 for val in values:
-                    curscore = matching_fun(val, ref_val)
+                    curscore = self.match_strings(ref_val, val)
                     if curscore > maxscore or bestval is None:
                         bestval = val
                         maxscore = curscore

@@ -26,8 +26,6 @@ class ReconcileEngineTest(unittest.TestCase):
 
     # Tests start here
 
-    # TODO add tests for matching decision
-
     def test_exact(self):
         self.assertEqual(
             self.best_match_id('Recumbent bicycle'),
@@ -97,3 +95,22 @@ class ReconcileEngineTest(unittest.TestCase):
                         ['P17'],
                         'Q34433',
                         False))
+
+    def test_match_strings(self):
+        # Matching identifiers
+        self.assertEqual(
+            self.r.match_strings('Q1234','R1234'),
+            0)
+        self.assertEqual(
+            self.r.match_strings('https://www.wikidata.org/entity/Q1234','Q1234'),
+            100)
+        self.assertEqual(
+            self.r.match_strings('12345','1234'),
+            0)
+
+        # Matching strings with different case and diacritics
+        self.assertEqual(
+            self.r.match_strings('Février','Fevrier'),
+            100)
+        self.assertTrue(
+            self.r.match_strings('PEMBERLEY','Pemberley') > 90)
