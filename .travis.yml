@@ -22,9 +22,10 @@ install:
 before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
   - cp config.py.in config.py
+  - ls
 
 script:
-  - coverage run -m unittest tests
+  - coverage run --omit=virtualenv/* -m unittest tests
 
 after_success:
   - coveralls
