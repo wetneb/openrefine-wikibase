@@ -139,6 +139,8 @@ class ItemStore(object):
                 if type(val) == dict:
                     if val.get('entity-type') == 'item':
                         values.add(val.get('id'))
+                    elif 'time' in val:
+                        values.add(val.get('time'))
                 else:
                     values.add(str(val))
             simplified[prop_id] = list(values)
