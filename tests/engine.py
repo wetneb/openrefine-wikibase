@@ -58,6 +58,11 @@ class ReconcileEngineTest(unittest.TestCase):
             len(self.results('Category:Oxford')),
             0)
 
+    def test_get_label(self):
+        self.assertEqual(
+            self.r.item_store.get_label('Q949879', 'en'),
+            'Elf')
+
     def test_prepare_property(self):
         self.assertDictEqual(
             self.r.prepare_property({'pid':'P17/P297','v':'FR'}),
@@ -114,3 +119,7 @@ class ReconcileEngineTest(unittest.TestCase):
             100)
         self.assertTrue(
             self.r.match_strings('PEMBERLEY','Pemberley') > 90)
+
+        # Match urls
+        self.assertTrue(
+            self.r.match_strings('gnu.org', 'http://gnu.org') > 50)
