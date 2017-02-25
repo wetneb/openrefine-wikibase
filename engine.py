@@ -233,7 +233,7 @@ class ReconcileEngine(object):
             scored['score'] = avg
 
             scored['id'] = qid
-            scored['name'] = scored['all_labels'].get('best_value', '')
+            scored['name'] = self.item_store.get_label(qid, default_language)
             scored['type'] = item.get('P31', [])
             types_to_prefetch |= set(scored['type'])
             scored['match'] = False # will be changed later
