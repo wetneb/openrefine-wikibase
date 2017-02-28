@@ -69,9 +69,13 @@ class SuggestEngine(object):
     def get_label(self, item, target_lang):
         typ = item.get('match', {}).get('type')
         lang = item.get('match', {}).get('language')
-        if typ == 'label' and lang == target_lang:
+        if typ == 'label' or typ == 'alias' and lang == target_lang:
             return item['match']['text']
-        return item['label']
+        if 'label' in item:
+            return item['label']
+        aliases = item.get('aliases')
+        if aliases:
+            return aliases[0]
 
     def find_something(self, args, typ='item', prefix=''):
         lang = args.get('lang', 'en')

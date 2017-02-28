@@ -41,6 +41,11 @@ class SuggestEngineTest(unittest.TestCase):
             self.best_match_id('property', 'Ringgold identifier'),
             'P3500')
 
+    def test_alias(self):
+        self.assertEqual(
+            self.best_match_id('entity', 'Institut Supérieur des Techniques de la Performance', lang='fr'),
+            'Q3152604')
+
     def test_sparql(self):
         self.assertEqual(
             self.best_match_id('property', 'P17/P297'),
