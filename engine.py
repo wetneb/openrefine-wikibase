@@ -119,7 +119,7 @@ class ReconcileEngine(object):
         prop['path'] = path
         return prop
 
-    def resolve_property_path(self, path, item, fetch_labels=True):
+    def resolve_property_path(self, path, item, lang='en', fetch_labels=True):
         """
         Returns the values matching the given path,
         starting on the item
@@ -127,9 +127,9 @@ class ReconcileEngine(object):
         :param fetch_labels: True if we should return the labels of
                              an item instead of its Q id.
         """
-        return list(set(self._resolve_property_path(path, item, fetch_labels)))
+        return list(set(self._resolve_property_path(path, item, lang, fetch_labels)))
 
-    def _resolve_property_path(self, path, item, fetch_labels):
+    def _resolve_property_path(self, path, item, lang, fetch_labels):
         qid = to_q(item)
 
         # Check if it as item
@@ -140,8 +140,12 @@ class ReconcileEngine(object):
         if not path:
             if type(item) == dict: # this is an item
                 # return all labels and aliases
+                labels = item.get('labels', {})
+                if lang in labels:
+                    return [labels[lang]]
+
                 return itertools.chain(
-                    item.get('labels', {}).values(),
+                    labels.values(),
                     item.get('aliases', []))
             else: # this is a value
                 return [item]
@@ -154,7 +158,7 @@ class ReconcileEngine(object):
         pid = path[0]
         remaining = path[1:]
         return itertools.chain(*[
-            self.resolve_property_path(remaining, child, fetch_labels)
+            self.resolve_property_path(remaining, child, lang, fetch_labels)
             for child in item.get(pid, [])
         ])
 
@@ -219,7 +223,11 @@ class ReconcileEngine(object):
                 maxscore = 0
                 bestval = None
                 ref_qid = to_q(ref_val)
-                values = list(self.resolve_property_path(prop['path'], item, fetch_labels=ref_qid is None))
+                values = list(self.resolve_property_path(
+                                prop['path'],
+                                item,
+                                fetch_labels=ref_qid is None,
+                                lang=default_language))
                 for val in values:
                     curscore = self.match_strings(ref_val, val)
                     if curscore > maxscore or bestval is None:

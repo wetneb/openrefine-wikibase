@@ -154,6 +154,14 @@ def preview(args, lang):
 @route('/fetch_values', method=['GET','POST'])
 @jsonp
 def fetch_values(args):
+    if 'lang' not in args:
+        args['lang'] = 'en'
+    return reconcile.fetch_values(args)
+
+@route('/<lang>/fetch_values', method=['GET','POST'])
+@jsonp
+def fetch_values(args, lang):
+    args['lang'] = lang
     return reconcile.fetch_values(args)
 
 @route('/')

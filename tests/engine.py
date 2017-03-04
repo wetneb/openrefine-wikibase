@@ -94,12 +94,20 @@ class ReconcileEngineTest(unittest.TestCase):
             ['P1433'],
             self.item('Q24791449')))
 
+        # With preferred language
+        self.assertEqual(
+            ['France'],
+            self.r.resolve_property_path(
+            ['P17'],
+            self.item('Q83259'),
+            lang='fr'))
+
         # Without resolving labels
         self.assertEqual(['Q145'],
                     self.r.resolve_property_path(
                         ['P17'],
                         'Q34433',
-                        False))
+                        fetch_labels=False))
 
     def test_match_strings(self):
         # Matching identifiers
