@@ -123,3 +123,14 @@ class ReconcileEngineTest(unittest.TestCase):
         # Match urls
         self.assertTrue(
             self.r.match_strings('gnu.org', 'http://gnu.org') > 50)
+
+    def test_match_strings_symmetric(self):
+        pairs = [('a','b c'),
+                ('aa bb', 'b aa'),
+                ('a b', 'b c'),
+                ('small birch tree','BirchTree'),
+                ]
+        for a, b in pairs:
+            self.assertEqual(self.r.match_strings(a,b),
+                             self.r.match_strings(b,a))
+

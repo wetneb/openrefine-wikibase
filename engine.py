@@ -34,9 +34,19 @@ class ReconcileEngine(object):
         val_q = to_q(val)
         if ref_q or val_q:
             return 100 if ref_q == val_q else 0
-        return fuzz.token_sort_ratio(unidecode(val).lower(), unidecode(ref).lower())
+        simplified_val = unidecode(val).lower()
+        simplified_ref = unidecode(ref).lower()
+
+        # Return symmetric score
+        r1 = fuzz.token_sort_ratio(simplified_val, simplified_ref)
+        r2 = fuzz.token_sort_ratio(simplified_ref, simplified_val)
+        r2 = r1
+        return int(0.5*(r1+r2))
 
     def wikidata_string_search(self, query_string, num_results):
+        """
+        Use the Wikidata API to search for matching items
+        """
         r = requests.get(
             'https://www.wikidata.org/w/api.php',
             {'action':'query',
