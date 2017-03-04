@@ -189,6 +189,8 @@ class ReconcileEngine(object):
         for qid, item in items.items():
             # Check the type if we have a type constraint
             current_types = item.get('P31', [])
+            type_found = len(current_types) > 0
+
             if target_types:
                 good_type = any([
                     any([
@@ -202,8 +204,10 @@ class ReconcileEngine(object):
                    for typ in current_types
                 ])
 
-            # If the type is invalid, skip the item
-            if not good_type:
+            # If the type is invalid, skip the item.
+            # If there is no type, we keep the item and will
+            # reduce the score later on.
+            if type_found and not good_type:
                 continue
 
             # Compute per-property score
@@ -240,6 +244,11 @@ class ReconcileEngine(object):
                 avg = sum_scores / total_weight
             else:
                 avg = 0
+            if not type_found:
+                # Discount the score: we don't want any match
+                # for these items, but they might be interesting
+                # as potential matches for the user.
+                avg /= 2
             scored['score'] = avg
 
             scored['id'] = qid
