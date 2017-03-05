@@ -191,6 +191,8 @@ class ReconcileEngine(object):
                                       'path':[]})
 
         scored_items = []
+        no_type_items = []
+
         types_to_prefetch = set()
         for qid, item in items.items():
             # Check the type if we have a type constraint
@@ -254,11 +256,6 @@ class ReconcileEngine(object):
                 avg = sum_scores / total_weight
             else:
                 avg = 0
-            if not type_found:
-                # Discount the score: we don't want any match
-                # for these items, but they might be interesting
-                # as potential matches for the user.
-                avg /= 2
             scored['score'] = avg
 
             scored['id'] = qid
@@ -267,10 +264,23 @@ class ReconcileEngine(object):
             types_to_prefetch |= set(scored['type'])
             scored['match'] = False # will be changed later
 
-            scored_items.append(scored)
+            if not type_found and target_types:
+                # Discount the score: we don't want any match
+                # for these items, but they might be interesting
+                # as potential matches for the user.
+                scored['score'] /= 2
+                no_type_items.append(scored)
+            else:
+                scored_items.append(scored)
 
         # Prefetch the labels for the types
         self.item_store.get_items(list(types_to_prefetch))
+
+        # If no item had the right type, fall back on items with no type.
+        # These items already have a much lower score, so there will be
+        # no automatic match.
+        if not scored_items:
+            scored_items = no_type_items
 
         # Add the labels to the response
         for i in range(len(scored_items)):

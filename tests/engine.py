@@ -53,6 +53,15 @@ class ReconcileEngineTest(unittest.TestCase):
             self.best_match_id('Oxford', typ='Q3957'), # town
             'Q34433')
 
+    def test_items_without_types(self):
+        """
+        Items without types can be returned only when
+        there are no other typed items that match.
+        """
+        self.assertEqual(
+            len(self.results('oxford', typ='Q3918')),
+            2) # Oxford Brookes university and University of Oxford
+
     def test_forbidden_type(self):
         self.assertEqual(
             len(self.results('Category:Oxford')),
