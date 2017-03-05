@@ -136,6 +136,7 @@ class ItemStore(object):
             # Get the preferred statement first
             ordered_claims = sorted(claims,
                 key=lambda c: 0 if c.get('rank') == 'preferred' else 1)
+
             for claim in ordered_claims:
                 val = claim.get('mainsnak', {}
                         ).get('datavalue', {}).get('value')

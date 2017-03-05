@@ -7,6 +7,7 @@ from typematcher import TypeMatcher
 from utils import to_q
 import re
 from unidecode import unidecode
+from language import language_fallback
 
 class ReconcileEngine(object):
     """
@@ -96,10 +97,16 @@ class ReconcileEngine(object):
         if not prop:
             raise ValueError('No property provided')
         path = self.prepare_property({'pid':prop})['path']
+        lang = args.get('lang')
+        if not lang:
+            raise ValueError('No lang provided')
 
         item = self.item_store.get_item(qid)
-        values = self.resolve_property_path(path, item,
-                (args.get('label') or 'true') == 'true')
+        values = self.resolve_property_path(
+                path,
+                item,
+                lang=lang,
+                fetch_labels=((args.get('label') or 'true') == 'true'))
         if args.get('flat') == 'true':
             if values:
                 return values[0]
@@ -141,12 +148,7 @@ class ReconcileEngine(object):
             if type(item) == dict: # this is an item
                 # return all labels and aliases
                 labels = item.get('labels', {})
-                if lang in labels:
-                    return [labels[lang]]
-
-                return itertools.chain(
-                    labels.values(),
-                    item.get('aliases', []))
+                return [language_fallback(labels, lang)]
             else: # this is a value
                 return [item]
 

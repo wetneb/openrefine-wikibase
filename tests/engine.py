@@ -96,11 +96,11 @@ class ReconcileEngineTest(unittest.TestCase):
 
         # With preferred language
         self.assertEqual(
-            ['France'],
+            ['Frankreich'],
             self.r.resolve_property_path(
             ['P17'],
             self.item('Q83259'),
-            lang='fr'))
+            lang='de'))
 
         # Without resolving labels
         self.assertEqual(['Q145'],
