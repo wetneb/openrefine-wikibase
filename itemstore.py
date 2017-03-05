@@ -132,18 +132,21 @@ class ItemStore(object):
 
         # Add other properties
         for prop_id, claims in item.get('claims', {}).items():
-            values = set()
-            for claim in claims:
+            values = []
+            # Get the preferred statement first
+            ordered_claims = sorted(claims,
+                key=lambda c: 0 if c.get('rank') == 'preferred' else 1)
+            for claim in ordered_claims:
                 val = claim.get('mainsnak', {}
                         ).get('datavalue', {}).get('value')
                 if type(val) == dict:
                     if val.get('entity-type') == 'item':
-                        values.add(val.get('id'))
+                        values.append(val.get('id'))
                     elif 'time' in val:
-                        values.add(val.get('time'))
+                        values.append(val.get('time'))
                 else:
-                    values.add(str(val))
-            simplified[prop_id] = list(values)
+                    values.append(str(val))
+            simplified[prop_id] = values
 
         return simplified
 

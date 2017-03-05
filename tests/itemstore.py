@@ -18,6 +18,16 @@ class ItemStoreTest(unittest.TestCase):
         self.assertEqual(self.s.get_label('Q3918', 'en'),
                         'university')
 
+    def test_preferred_rank(self):
+        """
+        The first value in the list should be the preferred rank,
+        if any. This item (Australia) contains various currencies
+        that have been in use before, and Australian Dollar
+        is the preferred one.
+        """
+        self.assertEqual(self.s.get_item('Q408')['P38'][0],
+                        'Q259502')
+
     def test_caching(self):
         item = self.s.get_item('Q750483')
         with requests_mock.Mocker() as mocker: # disable all HTTP reqs
