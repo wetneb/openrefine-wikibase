@@ -18,5 +18,7 @@ This is a new reconciliation interface, with the following features:
 TODO:
 * Better scoring.
 
+![Screenshot](https://tools.wmflabs.org/openrefine-wikidata/static/screenshot_items.png)
+
 MIT license.
 
