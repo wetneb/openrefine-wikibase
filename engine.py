@@ -152,7 +152,7 @@ class ReconcileEngine(object):
                     aliases = item.get('aliases', [])
                     return labels+aliases
                 else:
-                    labels = items.get('labels', {})
+                    labels = item.get('labels', {})
                     return [language_fallback(labels, lang)]
             else: # this is a value
                 return [item]
