@@ -8,7 +8,16 @@ href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
 integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
 crossorigin="anonymous">
 	</head>
-	<body style="padding: 100px">
+	<body>
+		<div id="logos" style="padding: 5px; float: right">
+		<a href="https://www.wikidata.org/"><img
+src="static/Wikidata-logo-en.svg" alt="Wikidata" height="100px" /></a>
+		<a href="http://openrefine.org/"><img
+src="static/Google-refine-logo.svg" alt="OpenRefine" height="60px" /></a>
+		<a href="https://tools.wmflabs.org/"><img src="static/Tool_Labs_logo_thumb.png" alt="Hosted on
+Tool Labs" height="100px" /></a>
+		</div>
+		<div style="padding: 100px">
 		<h1><a href="https://www.wikidata.org/wiki/Wikidata:Main_Page">Wikidata</a>
 			reconciliation for <a href="http://openrefine.org/">OpenRefine</a></h1>
 		<p class="lead">This web service can be used to align datasets to Wikidata items in OpenRefine.</p>
@@ -25,13 +34,15 @@ in your language, when they are available.</p>
 			<li><a
 href="https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation-Service-API">Documentation
 of the API</a></li>
-			<li><a href="https://github.com/wetneb/openrefine-wikidata">Source</a></li>
+			<li><a href="https://github.com/wetneb/openrefine-wikidata">Source</a> 
+<iframe
+src="https://ghbtns.com/github-btn.html?user=wetneb&repo=openrefine-wikidata&type=star&count=true"
+frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
+</li>
 			<li><a href="https://github.com/wetneb/openrefine-wikidata/issues">Bug tracker</a></li>
 			<li><a href="{{service_status_url}}">Service status</a></li>
 		</ul>
-		
-		
-		<h2>Resources for OpenRefine users</h2>
+		<h3>Resources for OpenRefine users</h3>
 		<ul>
 			<li><a
 href="https://github.com/OpenRefine/OpenRefine/wiki/Reconciliation">Official
@@ -44,5 +55,20 @@ href="https://musingsaboutlibrarianship.blogspot.co.uk/2017/03/openrefine-reconc
 of renconciliation services for OpenRefine</a> by <a
 href="https://twitter.com/aarontay">Aaron Tay</a> (in English)</li>
 		</ul>
+
+
+		<h3>Acknowledgements</h3>
+		<ul>
+			<li>The <a
+href="https://bitbucket.org/magnusmanske/reconcile">original
+reconciliation service</a> was written by
+<a href="http://magnusmanske.de/">Magnus Manske</a></li>
+			<li>This work was supported by <a
+href="https://www.bountysource.com/issues/985941-implement-wikidata-reconciliation-was-freebase">a
+bounty on OpenRefine</a></li>
+			<li>The service is hosted on the <a
+href="https://tools.wmflabs.org/">Wikimedia Tools Labs</a></li>
+		</ul>
+		</div>
 	</body>
 </html>
