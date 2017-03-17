@@ -126,7 +126,7 @@ class ReconcileEngine(object):
         prop['path'] = path
         return prop
 
-    def resolve_property_path(self, path, item, lang='en', fetch_labels=True):
+    def resolve_property_path(self, path, item, lang=None, fetch_labels=True):
         """
         Returns the values matching the given path,
         starting on the item
@@ -146,9 +146,14 @@ class ReconcileEngine(object):
 
         if not path:
             if type(item) == dict: # this is an item
-                # return all labels and aliases
-                labels = item.get('labels', {})
-                return [language_fallback(labels, lang)]
+                if not lang:
+                    # return all labels and aliases
+                    labels = list(item.get('labels', {}).values())
+                    aliases = item.get('aliases', [])
+                    return labels+aliases
+                else:
+                    labels = items.get('labels', {})
+                    return [language_fallback(labels, lang)]
             else: # this is a value
                 return [item]
 
@@ -231,7 +236,7 @@ class ReconcileEngine(object):
                                 prop['path'],
                                 item,
                                 fetch_labels=ref_qid is None,
-                                lang=default_language))
+                                lang=None)) # match with all labels
                 for val in values:
                     curscore = self.match_strings(ref_val, val)
                     if curscore > maxscore or bestval is None:
