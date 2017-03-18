@@ -3,7 +3,8 @@ from language import language_fallback as lngfb
 from config import preview_height, preview_width, thumbnail_width
 from config import image_properties, this_host
 import requests
-from bottle import template
+from bottle import SimpleTemplate
+from bottle import html_escape
 import hashlib
 import re
 
@@ -19,6 +20,25 @@ def commons_image_url(filename):
         base_fname += '.png'
     return base_fname
 
+def autodescribe(qid, lang):
+    """
+    Calls the autodesc API by Magnus
+    """
+    try:
+        r = requests.get('https://tools.wmflabs.org/autodesc/',
+            {'q':qid,
+            'format':'json',
+            'mode':'short',
+            'links':'wikidata',
+            'get_infobox':'yes',
+            'lang':lang},
+            timeout=2)
+        desc = r.json().get('result', '')
+        desc = desc.replace('<a href', '<a target="_blank" href')
+        return desc
+    except (requests.exceptions.RequestException, ValueError):
+        return ''
+
 class SuggestEngine(object):
     def __init__(self, redis_client):
         self.r = redis_client
@@ -26,7 +46,7 @@ class SuggestEngine(object):
         self.store = ItemStore(self.r)
         self.store.ttl = 24*60*60 # one day
         with open('templates/preview.html') as f:
-            self.preview_template = f.read()
+            self.preview_template = SimpleTemplate(f.read(), noescape=True)
 
     def get_image_statements(self, item):
         for pid in image_properties:
@@ -54,17 +74,24 @@ class SuggestEngine(object):
         lang = args.get('lang')
         image = self.get_image_for_item(item, lang)
 
+        desc = lngfb(item.get('descriptions'), lang)
+        if desc:
+            desc = html_escape(desc)
+
+        # if the description is really too short
+        if not desc or not ' ' in desc:
+            desc = autodescribe(id, lang)
+
         args = {
             'id':id,
-            'label': lngfb(item.get('labels'), lang) or id,
-            'description': lngfb(item.get('descriptions'), lang) or '',
+            'label': html_escape(lngfb(item.get('labels'), lang) or id),
+            'description': desc,
             'image': image,
             'url': 'https://www.wikidata.org/entity/'+id,
             'width': preview_width,
             'height': preview_height,
         }
-        return template(self.preview_template,
-            **args)
+        return self.preview_template.render(**args)
 
     def get_label(self, item, target_lang):
         typ = item.get('match', {}).get('type')
