@@ -11,7 +11,13 @@ def language_fallback(dct, target_language):
         return
     if not target_language:
         target_language = 'en'
+    # first, check if the chosen language is available
     if target_language in dct:
         return dct[target_language]
-    return dct.get('en')
+    # fall back on english
+    if target_language != 'en' and 'en' in dct:
+        return dct['en']
+    # otherwise, return anything we can find!
+    for val in dct.values():
+        return val
 

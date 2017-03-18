@@ -18,6 +18,10 @@ class ItemStoreTest(unittest.TestCase):
         self.assertEqual(self.s.get_label('Q3918', 'en'),
                         'university')
 
+    def test_label_fallback(self):
+        self.assertEqual(self.s.get_label('Q3578062', 'en'),
+                        "École nationale d'administration")
+
     def test_preferred_rank(self):
         """
         The first value in the list should be the preferred rank,

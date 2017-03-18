@@ -1,5 +1,6 @@
 import requests
 import json
+from language import language_fallback
 
 class ItemStore(object):
     """
@@ -26,7 +27,7 @@ class ItemStore(object):
         Shortcut to get the label of an item for a specific language
         """
         item = self.get_item(qid)
-        return item.get('labels', {}).get(lang, qid)
+        return language_fallback(item.get('labels', {}), lang) or qid
 
     def get_items(self, qids, force=False):
         """
