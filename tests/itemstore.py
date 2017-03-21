@@ -19,8 +19,8 @@ class ItemStoreTest(unittest.TestCase):
                         'university')
 
     def test_label_fallback(self):
-        self.assertEqual(self.s.get_label('Q3578062', 'en'),
-                        "École nationale d'administration")
+        # this item currently does not have a label in catalan
+        self.assertTrue(self.s.get_label('Q3578062', 'ca'))
 
     def test_preferred_rank(self):
         """
