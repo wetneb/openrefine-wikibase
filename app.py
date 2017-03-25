@@ -76,6 +76,8 @@ def api(args):
         identify = {
             'name':service_name + (' (%s)' % lang),
             'view':{'url':'https://www.wikidata.org/wiki/{{id}}'},
+            'identifierSpace':'http://www.wikidata.org/entity/',
+            'schemaSpace':'http://www.wikidata.org/prop/direct/',
             'suggest' : {
                 'type' : {
                     'service_url' : this_host,
@@ -95,6 +97,12 @@ def api(args):
                 'width' : preview_width,
                 'height': preview_height,
             },
+            'defaultTypes': [
+                {
+                    'id':'Q35120', # entity
+                    'name': reconcile.item_store.get_label('Q35120', lang)
+                }
+            ],
         }
         return identify
 
