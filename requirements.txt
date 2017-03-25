@@ -7,3 +7,4 @@ redis
 SPARQLWrapper
 requests_mock # for testing
 unidecode
+funcparserlib

@@ -1,0 +1,220 @@
+
+from funcparserlib.parser import skip
+from funcparserlib.parser import some
+from funcparserlib.parser import forward_decl
+from funcparserlib.parser import finished
+from funcparserlib.parser import NoParseError
+from funcparserlib.lexer import make_tokenizer
+from funcparserlib.lexer import LexerError
+import itertools
+
+from language import language_fallback
+from utils import to_q
+
+property_lexer_specs = [
+    ('DOT', (r'\.',)),
+    ('PID', (r'P\d+',)),
+    ('SLASH', (r'/',)),
+    ('PIPE', (r'\|',)),
+    ('LBRA', (r'\(',)),
+    ('RBRA', (r'\)',)),
+]
+tokenize_property = make_tokenizer(property_lexer_specs)
+
+def t(code):
+    return some(lambda x: x.type == code)
+
+def st(code):
+    return skip(t(code))
+
+class PropertyFactory(object):
+    """
+    A class to build property paths
+    """
+    def __init__(self, item_store):
+        self.item_store = item_store
+        self.parser = forward_decl()
+
+        atomic = forward_decl()
+        concat_path = forward_decl()
+        pipe_path = forward_decl()
+
+        atomic.define(
+            (t('PID') >> self.make_leaf) |
+            (t('DOT') >> self.make_empty) |
+            (st('LBRA') + pipe_path + st('RBRA'))
+        )
+
+        concat_path.define(
+            ((atomic + st('SLASH') + concat_path) >> self.make_slash) |
+            atomic
+        )
+
+        pipe_path.define(
+            ((concat_path + st('PIPE') + pipe_path) >> self.make_pipe) |
+            concat_path
+        )
+
+        self.parser.define(
+            (
+                pipe_path
+            ) + finished >> (lambda x: x[0])
+        )
+
+    def make_identity(self, a):
+        return a
+
+    def make_empty(self, dot):
+        return EmptyPropertyPath(self.item_store)
+
+    def make_leaf(self, pid):
+        return LeafProperty(self.item_store, pid.value)
+
+    def make_slash(self, lst):
+        return ConcatenatedPropertyPath(self.item_store, lst[0], lst[1])
+
+    def make_pipe(self, lst):
+        return DisjunctedPropertyPath(self.item_store, lst[0], lst[1])
+
+    def parse(self, property_path_string):
+        try:
+            tokens = list(tokenize_property(property_path_string))
+            return self.parser.parse(tokens)
+        except (LexerError, NoParseError) as e:
+            raise ValueError(str(e))
+
+class PropertyPath(object):
+    """
+    A class representing a SPARQL-like
+    property path. At the moment it only
+    supports the "/" and "|" operators.
+    """
+
+    def __init__(self, item_store):
+        """
+        Initializes the property path and
+        binds it to a given itemstore, for
+        later evaluation
+        """
+        self.item_store = item_store
+
+    def get_item(self, item):
+        """
+        Helper coercing a value to an item.
+        If it is already a dict, it is returned
+        untouched. Otherwise we convert it to a
+        Wikidata id and fetch it.
+        """
+        if type(item) == dict:
+            return item
+        qid = to_q(item)
+        if qid:
+            return self.item_store.get_item(qid)
+
+    def evaluate(self, item, lang=None, fetch_labels=True):
+        """
+        Evaluates the property path on the
+        given item. Returns a list of values.
+
+        :param lang: the language to use, if any labels are fetched
+        :param fetch_labels: should we returns items or labels?
+        """
+
+        def fetch_label(v):
+            item = self.get_item(v)
+            if not item:
+                return [v] # this is already a value
+
+            if not lang:
+                # return all labels and aliases
+                labels = list(item.get('labels', {}).values())
+                aliases = item.get('aliases', [])
+                return labels+aliases
+            else:
+                labels = item.get('labels', {})
+                return [language_fallback(labels, lang)]
+
+        values = self.step(item)
+        if fetch_labels:
+            values = itertools.chain(
+                *map(fetch_label, values)
+            )
+
+        return list(values)
+
+
+    def step(self, v):
+        """
+        Evaluates the property path on the
+        given value (most likely an item).
+        Returns a list of other values.
+
+        This is the method that should be
+        reimplemented by subclasses.
+        """
+        raise NotImplemented
+
+class EmptyPropertyPath(PropertyPath):
+    """
+    An empty path
+    """
+
+    def step(self, v):
+        return [v]
+
+    def __str__(self):
+        return '.'
+
+class LeafProperty(PropertyPath):
+    """
+    A node for a leaf, just a simple property like "P31"
+    """
+    def __init__(self, item_store, pid):
+        super(LeafProperty, self).__init__(item_store)
+        self.pid = pid
+
+    def step(self, v):
+        item = self.get_item(v)
+        return item.get(self.pid, [])
+
+    def __str__(self):
+        return self.pid
+
+class ConcatenatedPropertyPath(PropertyPath):
+    """
+    Executes two property paths one after
+    the other: this is the / operator
+    """
+    def __init__(self, item_store, a, b):
+        super(ConcatenatedPropertyPath, self).__init__(item_store)
+        self.a = a
+        self.b = b
+
+    def step(self, v):
+        intermediate_values = self.a.step(v)
+        final_values = [
+            self.b.step(v2)
+            for v2 in intermediate_values
+        ]
+        return itertools.chain(*final_values)
+
+    def __str__(self):
+        return str(self.a) + '/' + str(self.b)
+
+class DisjunctedPropertyPath(PropertyPath):
+    """
+    A disjunction of two property paths
+    """
+    def __init__(self, item_store, a, b):
+        super(DisjunctedPropertyPath, self).__init__(item_store)
+        self.a = a
+        self.b = b
+
+    def step(self, v):
+        va = self.a.step(v)
+        vb = self.b.step(v)
+        return itertools.chain(*[va,vb])
+
+    def __str__(self):
+        return '('+str(self.a) + '|' + str(self.b)+')'
+

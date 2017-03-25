@@ -8,6 +8,8 @@ from utils import to_q
 import re
 from unidecode import unidecode
 from language import language_fallback
+from propertypath import PropertyFactory
+from propertypath import EmptyPropertyPath
 
 class ReconcileEngine(object):
     """
@@ -16,6 +18,7 @@ class ReconcileEngine(object):
     def __init__(self, redis_client):
         self.item_store = ItemStore(redis_client)
         self.type_matcher = TypeMatcher(redis_client)
+        self.pf = PropertyFactory(self.item_store)
         self.property_weight = 0.4
         self.validation_threshold_discount_per_property = 5
         self.match_score_gap = 10
@@ -120,54 +123,12 @@ class ReconcileEngine(object):
         Converts a property to RDF paths
         """
         pid = prop['pid']
-        path = [pid]
-        if '/' in pid:
-            path = pid.split('/')
+        path = self.pf.parse(pid)
+        print("parsed")
+        print(pid)
+        print(path)
         prop['path'] = path
         return prop
-
-    def resolve_property_path(self, path, item, lang=None, fetch_labels=True):
-        """
-        Returns the values matching the given path,
-        starting on the item
-
-        :param fetch_labels: True if we should return the labels of
-                             an item instead of its Q id.
-        """
-        return list(set(self._resolve_property_path(path, item, lang, fetch_labels)))
-
-    def _resolve_property_path(self, path, item, lang, fetch_labels):
-        qid = to_q(item)
-
-        # Check if it as item
-        if type(item) != dict:
-            if qid and (path or fetch_labels):
-                item = self.item_store.get_item(qid)
-
-        if not path:
-            if type(item) == dict: # this is an item
-                if not lang:
-                    # return all labels and aliases
-                    labels = list(item.get('labels', {}).values())
-                    aliases = item.get('aliases', [])
-                    return labels+aliases
-                else:
-                    labels = item.get('labels', {})
-                    return [language_fallback(labels, lang)]
-            else: # this is a value
-                return [item]
-
-        # otherwise we want to step into the item
-
-        if type(item) != dict:
-            return [] # we can't step into a value
-
-        pid = path[0]
-        remaining = path[1:]
-        return itertools.chain(*[
-            self.resolve_property_path(remaining, child, lang, fetch_labels)
-            for child in item.get(pid, [])
-        ])
 
     def _rank_items(self, query, ids, default_language):
         """
@@ -193,7 +154,7 @@ class ReconcileEngine(object):
         # Add the label as "yet another property"
         properties_with_label = list(map(self.prepare_property, properties))
         properties_with_label.append({'pid':'all_labels','v':query['query'],
-                                      'path':[]})
+                                      'path':EmptyPropertyPath(self.item_store)})
 
         scored_items = []
         no_type_items = []
@@ -232,11 +193,10 @@ class ReconcileEngine(object):
                 maxscore = 0
                 bestval = None
                 ref_qid = to_q(ref_val)
-                values = list(self.resolve_property_path(
-                                prop['path'],
-                                item,
+                values = prop['path'].evaluate(item,
                                 fetch_labels=ref_qid is None,
-                                lang=None)) # match with all labels
+                                lang=None) # match with all labels
+
                 for val in values:
                     curscore = self.match_strings(ref_val, val)
                     if curscore > maxscore or bestval is None:
