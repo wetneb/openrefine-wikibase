@@ -7,6 +7,7 @@ from bottle import SimpleTemplate
 from bottle import html_escape
 import hashlib
 import re
+from propertypath import PropertyFactory
 
 def commons_image_url(filename):
     filename = filename.replace(' ', '_')
@@ -42,8 +43,9 @@ def autodescribe(qid, lang):
 class SuggestEngine(object):
     def __init__(self, redis_client):
         self.r = redis_client
-        self.property_path_re = re.compile(r'(SPARQL ?:? ?)?(P\d+(/P\d+){1,2})$')
+        self.property_path_re = re.compile(r'(SPARQL ?:? ?)?(\(*P\d+[/\|].*)$')
         self.store = ItemStore(self.r)
+        self.ft = PropertyFactory(self.store)
         self.store.ttl = 24*60*60 # one day
         with open('templates/preview.html') as f:
             self.preview_template = SimpleTemplate(f.read(), noescape=True)
@@ -94,6 +96,11 @@ class SuggestEngine(object):
         return self.preview_template.render(**args)
 
     def get_label(self, item, target_lang):
+        """
+        Gets a label from items returned from search
+        results (not from full representations of JSON
+        items, that's in ItemStore).
+        """
         typ = item.get('match', {}).get('type')
         lang = item.get('match', {}).get('language')
         if typ == 'label' or typ == 'alias' and lang == target_lang:
@@ -134,7 +141,11 @@ class SuggestEngine(object):
         s = (args.get('prefix') or '').strip()
         match = self.property_path_re.match(s)
         if match:
-            return {'result':[{'id':match.group(2),'name':'SPARQL: '+match.group(2)}]}
+            try:
+                parsed = self.ft.parse(match.group(2))
+                return {'result':[{'id':match.group(2),'name':'SPARQL: '+match.group(2)}]}
+            except ValueError:
+                pass
         return self.find_something(args, 'property', "Property:")
 
     def find_entity(self, args):

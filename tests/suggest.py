@@ -50,6 +50,9 @@ class SuggestEngineTest(unittest.TestCase):
         self.assertEqual(
             self.best_match_id('property', 'P17/P297'),
             'P17/P297')
+        self.assertEqual(
+            self.best_match_id('property', 'P17/(P297|.)'),
+            'P17/(P297|.)')
 
     def test_custom_language(self):
         self.assertTrue('ville' in
