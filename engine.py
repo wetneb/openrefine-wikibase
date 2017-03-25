@@ -9,7 +9,6 @@ import re
 from unidecode import unidecode
 from language import language_fallback
 from propertypath import PropertyFactory
-from propertypath import EmptyPropertyPath
 
 class ReconcileEngine(object):
     """
@@ -120,14 +119,12 @@ class ReconcileEngine(object):
 
     def prepare_property(self, prop):
         """
-        Converts a property to RDF paths
+        Converts a property to a SPARQL path
         """
         pid = prop['pid']
         path = self.pf.parse(pid)
-        print("parsed")
-        print(pid)
-        print(path)
         prop['path'] = path
+        prop['ends_with_id'] = path.ends_with_identifier()
         return prop
 
     def _rank_items(self, query, ids, default_language):
@@ -153,8 +150,11 @@ class ReconcileEngine(object):
 
         # Add the label as "yet another property"
         properties_with_label = list(map(self.prepare_property, properties))
-        properties_with_label.append({'pid':'all_labels','v':query['query'],
-                                      'path':EmptyPropertyPath(self.item_store)})
+        properties_with_label.append({
+            'pid':'all_labels',
+            'v':query['query'],
+            'path':self.pf.make_empty(),
+            'ends_with_id':False})
 
         scored_items = []
         no_type_items = []
@@ -189,16 +189,22 @@ class ReconcileEngine(object):
             for prop in properties_with_label:
                 prop_id = prop['pid']
                 ref_val = prop['v']
+                path = prop['path']
+                ends_with_id = prop['ends_with_id']
 
                 maxscore = 0
                 bestval = None
                 ref_qid = to_q(ref_val)
-                values = prop['path'].evaluate(item,
-                                fetch_labels=ref_qid is None,
-                                lang=None) # match with all labels
+                values = path.evaluate(
+                            item,
+                            fetch_labels=ref_qid is None,
+                            lang=None) # match with all labels
 
                 for val in values:
-                    curscore = self.match_strings(ref_val, val)
+                    if ends_with_id:
+                        curscore = 100 if ref_val == val else 0
+                    else:
+                        curscore = self.match_strings(ref_val, val)
                     if curscore > maxscore or bestval is None:
                         bestval = val
                         maxscore = curscore

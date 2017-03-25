@@ -79,6 +79,14 @@ class PropertyTest(unittest.TestCase):
             self.resolve('P17', 'Q34433', fetch_labels=False),
             ['Q145'])
 
+        # With dot
+        self.assertEqual(
+            self.resolve('./P2427', 'Q34433', fetch_labels=False),
+                ['grid.4991.5'])
+        self.assertEqual(
+            self.resolve('P2427/.', 'Q34433', fetch_labels=False),
+                ['grid.4991.5'])
+
         # With disjunction
         self.assertSetEqual(
             set(self.resolve('P17', # country
@@ -94,4 +102,40 @@ class PropertyTest(unittest.TestCase):
             set(self.resolve('P17|(P749/P17)', # brackets not actually needed
                         'Q1011981', fetch_labels=False)),
                     {'Q148','Q30'}) # USA + China
+
+    def test_is_primary_identifier(self):
+        self.assertTrue(
+            self.f.parse('P3500').is_primary_identifier())
+        self.assertTrue(
+            self.f.parse('P2427').is_primary_identifier())
+        self.assertTrue(
+            self.f.parse('./P2427').is_primary_identifier())
+        self.assertTrue(
+            self.f.parse('(P2427|P3500)').is_primary_identifier())
+        self.assertFalse(
+            self.f.parse('.').is_primary_identifier())
+        self.assertFalse(
+            self.f.parse('P31').is_primary_identifier())
+        self.assertFalse(
+            self.f.parse('P3500/P2427').is_primary_identifier())
+        self.assertFalse(
+            self.f.parse('(P3500|P17)').is_primary_identifier())
+
+    def test_ends_with_identifier(self):
+        self.assertTrue(
+            self.f.parse('P3500').ends_with_identifier())
+        self.assertTrue(
+            self.f.parse('P2427').ends_with_identifier())
+        self.assertTrue(
+            self.f.parse('P749/P2427').ends_with_identifier())
+        self.assertTrue(
+            self.f.parse('P749/(P2427|P3500)').ends_with_identifier())
+        self.assertFalse(
+            self.f.parse('.').ends_with_identifier())
+        self.assertFalse(
+            self.f.parse('P31').ends_with_identifier())
+        self.assertFalse(
+            self.f.parse('P3500/P17').ends_with_identifier())
+        self.assertFalse(
+            self.f.parse('(P3500|P17)').ends_with_identifier())
 
