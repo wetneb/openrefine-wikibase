@@ -131,3 +131,11 @@ class ReconcileEngineTest(unittest.TestCase):
             self.assertEqual(self.r.match_strings(a,b),
                              self.r.match_strings(b,a))
 
+
+    def test_fetch_values(self):
+        self.assertDictEqual(
+            self.r.fetch_values({'item':'Q881333','prop':'P213', 'lang':'de'}),
+            {'prop': 'P213', 'values': ['0000 0004 0547 722X'], 'item': 'Q881333'})
+        self.assertEqual(
+            self.r.fetch_values({'item':'Q881333','prop':'P213', 'lang':'de', 'flat':'true'}),
+            '0000 0004 0547 722X')

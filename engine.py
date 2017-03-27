@@ -327,10 +327,8 @@ class ReconcileEngine(object):
         if not lang:
             raise ValueError('No lang provided')
 
-        item = self.item_store.get_item(qid)
-        values = self.resolve_property_path(
-                path,
-                item,
+        values = path.evaluate(
+                qid,
                 lang=lang,
                 fetch_labels=((args.get('label') or 'true') == 'true'))
         if args.get('flat') == 'true':
