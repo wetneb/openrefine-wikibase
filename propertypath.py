@@ -8,6 +8,7 @@ from funcparserlib.lexer import make_tokenizer
 from funcparserlib.lexer import LexerError
 import itertools
 from SPARQLWrapper import SPARQLWrapper, JSON
+from collections import defaultdict
 
 from language import language_fallback
 from utils import to_q
@@ -200,13 +201,13 @@ class PropertyPath(object):
         """
         raise NotImplemented
 
-    def is_primary_identifier(self):
+    def is_unique_identifier(self):
         """
         Given a path, does this path represent a unique identifier
         for the item it starts from?
 
         This only happens when the path is a disjunction of single
-        properties which are all identifiers
+        properties which are all unique identifiers
         """
         try:
             return self.uniform_depth() == 1
@@ -230,8 +231,66 @@ class PropertyPath(object):
     def ends_with_identifier(self):
         """
         Does this path only end with identifier properties?
+        These identifiers are not necessarily unique.
         """
         raise NotImplemented
+
+    def fetch_qids_by_values(self, values, lang):
+        """
+        Fetches all the Qids and their labels in the selected language,
+        which bear any of the given values along this property.
+
+        The results are capped to four times the number of given
+        values, as it is expected that the relevant property has
+        a uniqueness constraint, so instances should be mostly unique.
+        """
+        values_str = ' '.join('"%s"' % v
+                          for v in values )
+        limit = 4*len(values)
+        sparql_query = """
+        PREFIX wd: <http://www.wikidata.org/entity/>
+        PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        SELECT ?qid ?value
+        (SAMPLE(COALESCE(?best_label, ?fallback_label)) as ?label)
+        WHERE {
+            ?qid %s ?value.
+            VALUES ?value { %s }
+            OPTIONAL {
+                ?qid rdfs:label ?best_label .
+                FILTER(LANG(?best_label) = "%s")
+            }
+            OPTIONAL { ?qid rdfs:label ?fallback_label }
+        }
+        GROUP BY ?qid ?value
+        LIMIT %d
+        """ % (
+            self.__str__(add_prefix=True),
+            values_str,
+            lang,
+            limit)
+
+        sparql = self.factory.sparql
+        sparql.setQuery(sparql_query)
+        sparql.setReturnFormat(JSON)
+        results = sparql.query().convert()
+
+        value_to_qid = defaultdict(list)
+
+        for results in results['results']['bindings']:
+            qid = to_q(results['qid']['value'])
+            label = results['label'].get('value') or qid
+            primary_id = results['value']['value']
+            value_to_qid[primary_id].append((qid,label))
+
+        return value_to_qid
+
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        return str(self) == str(other)
 
 class EmptyPropertyPath(PropertyPath):
     """

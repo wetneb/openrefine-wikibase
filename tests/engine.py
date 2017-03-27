@@ -18,8 +18,11 @@ class ReconcileEngineTest(unittest.TestCase):
     def results(self, *args, **kwargs):
         return self.query(*args, **kwargs)['result']
 
+    def result_ids(self, *args, **kwargs):
+        return [r['id'] for r in self.query(*args, **kwargs)['result']]
+
     def best_match_id(self, *args, **kwargs):
-        return self.results(*args, **kwargs)[0]['id']
+        return self.result_ids(*args, **kwargs)[0]
 
     # Tests start here
 
@@ -49,6 +52,32 @@ class ReconcileEngineTest(unittest.TestCase):
         self.assertNotEqual(
             self.best_match_id('Oxford', typ='Q3957'), # town
             'Q34433')
+
+    def test_unique_id(self):
+        """
+        We can fetch items by unique ids!
+        """
+        # The search string does not matter: it is ignored
+        # because we found an exact match by identifier.
+        self.assertEqual(
+            self.result_ids('this string is ignored',
+            properties=[{'v':'142129514','pid':'P214'}]),
+            ['Q34433'])
+
+        # Not proving an id doesn't mess up the reconciliation
+        self.assertEqual(
+            self.best_match_id('University of Oxford',
+            properties=[{'v':' ','pid':'P214'}]),
+            'Q34433')
+
+        # Providing two conflicting identifiers gives
+        # two reconciliation candidates with maximum score.
+        # They are therefore not matched automatically.
+        self.assertSetEqual(
+            set(self.result_ids('this string is ignored',
+            properties=[{'v':'142129514','pid':'P214'},
+                        {'v':'144834915','pid':'P214'}])),
+            {'Q34433','Q1377'})
 
     def test_items_without_types(self):
         """

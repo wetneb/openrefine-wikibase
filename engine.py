@@ -7,6 +7,7 @@ from typematcher import TypeMatcher
 from utils import to_q
 import re
 from unidecode import unidecode
+from collections import defaultdict
 from language import language_fallback
 from propertypath import PropertyFactory
 
@@ -62,11 +63,76 @@ class ReconcileEngine(object):
         resp = r.json()
         return [item['title'] for item in resp.get('query', {}).get('search', [])]
 
+    def prepare_property(self, prop):
+        """
+        Converts a property to a SPARQL path
+        """
+        pid = prop['pid']
+        path = self.pf.parse(pid)
+        prop['path'] = path
+        prop['v'] = str(prop.get('v')).strip()
+
+        # This indicates whether the values returned
+        # by the property path are identifiers. If so,
+        # we should not fuzzy-match them, but only
+        # use equality comparison.
+        prop['ends_with_id'] = path.ends_with_identifier()
+
+        # This indicates whether the property is a unique
+        # identifier for the resolved items. If so, we can use it
+        # to fetch matches, without relying on string search.
+        prop['unique_id'] = path.is_unique_identifier()
+        return prop
+
     def process_queries(self, queries, default_language='en'):
+        """
+        This contains the backbone of the reconciliation algorithm.
+
+        - If unique identifiers are supplied for the queries,
+          try to use these to find matches by SPARQL
+        - Otherwise, do a string search for candidates,
+          filter them and rank them.
+        """
+        # Prepare all properties
+        for query_id in queries:
+            queries[query_id]['properties'] = list(map(self.prepare_property,
+                queries[query_id].get('properties', [])))
+
+        # Find primary ids in the queries
+        unique_id_values = defaultdict(set)
+        for query in queries.values():
+            for prop in query['properties']:
+                v = prop['v']
+                if prop['unique_id'] and v:
+                    unique_id_values[prop['path']].add(v)
+
+        # Find Qids and labels by primary id
+        unique_id_to_qid = {
+            path : path.fetch_qids_by_values(values, default_language)
+            for path, values in unique_id_values.items()
+        }
+
         # Fetch all candidate qids for each query
         qids = {}
         qids_to_prefetch = set()
         for query_id, query in queries.items():
+            # First, see if any qids can be fetched by primary id
+            primary_qids_and_labels = []
+            for prop in query['properties']:
+                if prop['unique_id']:
+                    primary_qids_and_labels += unique_id_to_qid.get(
+                        prop['path'], {}).get(
+                        prop['v'], [])
+
+            if primary_qids_and_labels:
+                # for now we're throwing away the labels
+                # returned by the SPARQL query. Ideally we
+                # could keep them to avoid fetching these items.
+                qids[query_id] = [qid for qid, _ in primary_qids_and_labels]
+                qids_to_prefetch |= set(qids[query_id])
+                continue
+
+            # Otherwise, do a string search
             if 'query' not in query:
                 raise ValueError('No "query" provided')
             num_results = int(query.get('limit') or default_num_results)
@@ -86,46 +152,6 @@ class ReconcileEngine(object):
             }
 
         return result
-
-    def fetch_values(self, args):
-        """
-        Endpoint allowing clients to fetch the values associated
-        to an item and a property path.
-        """
-        qid = to_q(args.get('item'))
-        if not qid:
-            raise ValueError('No item provided')
-        prop = args.get('prop')
-        if not prop:
-            raise ValueError('No property provided')
-        path = self.prepare_property({'pid':prop})['path']
-        lang = args.get('lang')
-        if not lang:
-            raise ValueError('No lang provided')
-
-        item = self.item_store.get_item(qid)
-        values = self.resolve_property_path(
-                path,
-                item,
-                lang=lang,
-                fetch_labels=((args.get('label') or 'true') == 'true'))
-        if args.get('flat') == 'true':
-            if values:
-                return values[0]
-            else:
-                return ''
-        else:
-            return {'item':qid, 'prop':prop, 'values':values}
-
-    def prepare_property(self, prop):
-        """
-        Converts a property to a SPARQL path
-        """
-        pid = prop['pid']
-        path = self.pf.parse(pid)
-        prop['path'] = path
-        prop['ends_with_id'] = path.ends_with_identifier()
-        return prop
 
     def _rank_items(self, query, ids, default_language):
         """
@@ -149,12 +175,13 @@ class ReconcileEngine(object):
         items = self.item_store.get_items(ids)
 
         # Add the label as "yet another property"
-        properties_with_label = list(map(self.prepare_property, properties))
-        properties_with_label.append({
+        properties_with_label = properties + [{
             'pid':'all_labels',
             'v':query['query'],
             'path':self.pf.make_empty(),
-            'ends_with_id':False})
+            'ends_with_id':False,
+            'unique_id':False
+        }]
 
         scored_items = []
         no_type_items = []
@@ -186,6 +213,7 @@ class ReconcileEngine(object):
 
             # Compute per-property score
             scored = {}
+            unique_id_found = False
             for prop in properties_with_label:
                 prop_id = prop['pid']
                 ref_val = prop['v']
@@ -209,6 +237,10 @@ class ReconcileEngine(object):
                         bestval = val
                         maxscore = curscore
 
+                if prop['unique_id'] and maxscore == 100:
+                    # We found a match for a unique identifier!
+                    unique_id_found = True
+
                 weight = (1.0 if prop_id == 'all_labels'
                           else self.property_weight)
                 scored[prop_id] = {
@@ -223,7 +255,10 @@ class ReconcileEngine(object):
                 prop['weighted'] for pid, prop in scored.items()
                 ])
             total_weight = self.property_weight*len(properties) + 1.0
-            if sum_scores:
+
+            if unique_id_found:
+                avg = 100 # maximum score for matches by unique identifiers
+            elif sum_scores:
                 avg = sum_scores / total_weight
             else:
                 avg = 0
@@ -235,7 +270,7 @@ class ReconcileEngine(object):
             types_to_prefetch |= set(scored['type'])
             scored['match'] = False # will be changed later
 
-            if not type_found and target_types:
+            if not type_found and target_types and not unique_id_found:
                 # Discount the score: we don't want any match
                 # for these items, but they might be interesting
                 # as potential matches for the user.
@@ -275,5 +310,36 @@ class ReconcileEngine(object):
     def process_single_query(self, q, default_language='en'):
         results = self.process_queries({'q':q}, default_language)
         return results['q']
+
+    def fetch_values(self, args):
+        """
+        Endpoint allowing clients to fetch the values associated
+        to an item and a property path.
+        """
+        qid = to_q(args.get('item'))
+        if not qid:
+            raise ValueError('No item provided')
+        prop = args.get('prop')
+        if not prop:
+            raise ValueError('No property provided')
+        path = self.prepare_property({'pid':prop})['path']
+        lang = args.get('lang')
+        if not lang:
+            raise ValueError('No lang provided')
+
+        item = self.item_store.get_item(qid)
+        values = self.resolve_property_path(
+                path,
+                item,
+                lang=lang,
+                fetch_labels=((args.get('label') or 'true') == 'true'))
+        if args.get('flat') == 'true':
+            if values:
+                return values[0]
+            else:
+                return ''
+        else:
+            return {'item':qid, 'prop':prop, 'values':values}
+
 
 

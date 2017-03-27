@@ -103,23 +103,23 @@ class PropertyTest(unittest.TestCase):
                         'Q1011981', fetch_labels=False)),
                     {'Q148','Q30'}) # USA + China
 
-    def test_is_primary_identifier(self):
+    def test_is_unique_identifier(self):
         self.assertTrue(
-            self.f.parse('P3500').is_primary_identifier())
+            self.f.parse('P3500').is_unique_identifier())
         self.assertTrue(
-            self.f.parse('P2427').is_primary_identifier())
+            self.f.parse('P2427').is_unique_identifier())
         self.assertTrue(
-            self.f.parse('./P2427').is_primary_identifier())
+            self.f.parse('./P2427').is_unique_identifier())
         self.assertTrue(
-            self.f.parse('(P2427|P3500)').is_primary_identifier())
+            self.f.parse('(P2427|P3500)').is_unique_identifier())
         self.assertFalse(
-            self.f.parse('.').is_primary_identifier())
+            self.f.parse('.').is_unique_identifier())
         self.assertFalse(
-            self.f.parse('P31').is_primary_identifier())
+            self.f.parse('P31').is_unique_identifier())
         self.assertFalse(
-            self.f.parse('P3500/P2427').is_primary_identifier())
+            self.f.parse('P3500/P2427').is_unique_identifier())
         self.assertFalse(
-            self.f.parse('(P3500|P17)').is_primary_identifier())
+            self.f.parse('(P3500|P17)').is_unique_identifier())
 
     def test_ends_with_identifier(self):
         self.assertTrue(
@@ -138,4 +138,31 @@ class PropertyTest(unittest.TestCase):
             self.f.parse('P3500/P17').ends_with_identifier())
         self.assertFalse(
             self.f.parse('(P3500|P17)').ends_with_identifier())
+
+    def fetch_by_values(self, path_string, values, lang='en'):
+        path = self.f.parse(path_string)
+        return path.fetch_qids_by_values(values, lang)
+
+    def test_fetch_qids_by_values(self):
+        # Just one value, VIAF id for Oxford
+        self.assertDictEqual(
+            self.fetch_by_values('P214', ['142129514']),
+            {'142129514':[('Q34433', 'University of Oxford')]})
+
+        # Two values, for different entities
+        self.assertDictEqual(
+            self.fetch_by_values('P214', ['142129514','144834915']),
+            {'142129514':[('Q34433', 'University of Oxford')],
+             '144834915':[('Q1377', 'University of Ljubljana')]})
+
+        # Two different properties
+        self.assertDictEqual(
+            self.fetch_by_values('(P214|P3500)', ['142129514','1990']),
+            {'142129514':[('Q34433', 'University of Oxford')],
+             '1990':[('Q49108', 'Massachusetts Institute of Technology')]})
+
+        # No label defined
+        self.assertDictEqual(
+            self.fetch_by_values('P213', ['0000 0001 2169 3027'], lang='ko'),
+            {'0000 0001 2169 3027':[('Q273600', 'École nationale vétérinaire d’Alfort')]})
 
