@@ -68,7 +68,9 @@ class ItemStore(object):
             fetched[qid] = self.minify_item(item)
 
         self.r.mset({self._key_for_qid(qid) : json.dumps(v)
-                     for qid, v in fetched.items()}, ex=self.ttl)
+                     for qid, v in fetched.items()})
+        for qid in fetched:
+            self.r.expire(self._key_for_qid(qid), self.ttl)
 
         result.update(fetched)
         return result
@@ -127,9 +129,6 @@ class ItemStore(object):
                 aliases.add(lang_alias['value'])
 
         simplified['aliases'] = list(aliases)
-
-        # Add descriptions
-        # TODO
 
         # Add other properties
         for prop_id, claims in item.get('claims', {}).items():
