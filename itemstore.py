@@ -67,8 +67,9 @@ class ItemStore(object):
         for qid, item in items.items():
             fetched[qid] = self.minify_item(item)
 
-        self.r.mset({self._key_for_qid(qid) : json.dumps(v)
-                     for qid, v in fetched.items()})
+        if fetched:
+            self.r.mset({self._key_for_qid(qid) : json.dumps(v)
+                         for qid, v in fetched.items()})
         for qid in fetched:
             self.r.expire(self._key_for_qid(qid), self.ttl)
 
