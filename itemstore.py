@@ -1,6 +1,7 @@
 import requests
 import json
 from language import language_fallback
+from string import Template
 
 class ItemStore(object):
     """
@@ -155,5 +156,17 @@ class ItemStore(object):
 
     def _key_for_qid(self, qid):
         return ':'.join([self.prefix, qid])
+
+
+    def get_property_values(self, qids, path):
+        """
+        Given a property path, fetch all its values
+        for particular qids.
+        """
+        # Step 1: prefetch the items
+        items = self.get_items(qids)
+        # Step 2: fetch the properties
+        return [ path.evaluate(item, fetch_labels=False) for item in items ]
+
 
 

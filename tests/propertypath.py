@@ -103,6 +103,35 @@ class PropertyTest(unittest.TestCase):
                         'Q1011981', fetch_labels=False)),
                     {'Q148','Q30'}) # USA + China
 
+    def resolve_by_sparql(self, prop_path, qid):
+        path = self.f.parse(prop_path)
+        results = self.f.resolve_by_sparql([qid],path)
+        return results[qid]
+
+    def test_get_property_values_by_sparql(self):
+        self.assertEqual(
+            self.resolve_by_sparql('P297', 'Q142'),
+            [('FR',None)])
+
+        self.assertEqual(
+            self.resolve_by_sparql('P17/P297', 'Q83259'),
+            [('FR',None)])
+
+        self.assertTrue(
+            ('Q142',('France','fr')) in
+            self.resolve_by_sparql('P17', 'Q83259')
+        )
+
+        self.assertTrue(
+            ('Q10927439',('International Journal of Medical Sciences','en')) in
+            self.resolve_by_sparql('P1433', 'Q24791449')
+        )
+
+        self.assertSetEqual(
+            set(qid for qid,_ in self.resolve_by_sparql('P17|(P749/P17)', # brackets not actually needed
+                        'Q1011981')),
+                    {'Q148','Q30'}) # USA + China
+
     def test_is_unique_identifier(self):
         self.assertTrue(
             self.f.parse('P3500').is_unique_identifier())

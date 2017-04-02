@@ -9,6 +9,7 @@ from funcparserlib.lexer import LexerError
 import itertools
 from SPARQLWrapper import SPARQLWrapper, JSON
 from collections import defaultdict
+from string import Template
 
 from language import language_fallback
 from utils import to_q
@@ -128,6 +129,51 @@ class PropertyFactory(object):
 
         self.r.expire(self.unique_ids_key, self.ttl)
 
+
+    def resolve_by_sparql(self, qids, path):
+        """
+        Given a path, fetch all the values from the given qids
+        along the path.
+
+        :returns: a dictionary containing, for each qid,
+            the list of (qid,(label,lang)) for each value
+            along the path.
+        """
+        sparql_query = Template("""
+        PREFIX wd: <http://www.wikidata.org/entity/>
+        PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        SELECT ?qid ?v ?vLabel
+        WHERE {
+        VALUES ?qid { $qids }
+        ?qid $path ?v.
+        OPTIONAL { ?v rdfs:label ?vLabel }
+        }
+        """)
+        sparql_query = sparql_query.substitute(
+            qids = ' '.join('wd:'+qid for qid in qids),
+            path = path.__str__(add_prefix=True),
+        )
+
+        self.sparql.setQuery(sparql_query)
+        self.sparql.setReturnFormat(JSON)
+        results = self.sparql.query().convert()
+
+
+        mappings = defaultdict(list)
+        for bindings in results['results']['bindings']:
+            qid = to_q(bindings['qid']['value'])
+            value = bindings['v'].get('value')
+            value = to_q(value) or value
+            label = bindings.get('vLabel')
+            if label:
+                labelString = label.get('value')
+                labelLang = label.get('xml:lang')
+                label = (labelString,labelLang)
+            if value:
+                mappings[qid].append((value,label))
+
+        return mappings
 
 class PropertyPath(object):
     """
