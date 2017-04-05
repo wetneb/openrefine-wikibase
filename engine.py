@@ -313,31 +313,54 @@ class ReconcileEngine(object):
 
     def fetch_values(self, args):
         """
-        Endpoint allowing clients to fetch the values associated
-        to an item and a property path.
-        """
-        qid = to_q(args.get('item'))
-        if not qid:
-            raise ValueError('No item provided')
-        prop = args.get('prop')
-        if not prop:
-            raise ValueError('No property provided')
-        path = self.prepare_property({'pid':prop})['path']
-        lang = args.get('lang')
-        if not lang:
-            raise ValueError('No lang provided')
+        Same as fetch_property_by_batch, but for a single
+        item (more convenient for testing).
 
-        values = path.evaluate(
-                qid,
-                lang=lang,
-                fetch_labels=((args.get('label') or 'true') == 'true'))
+        The `flat` parameter can be used to return just
+        the value, without any JSON.
+        """
+        new_args = args.copy()
+        qid = args.get('item', '')
+        new_args['items'] = qid
+        results = self.fetch_property_by_batch(new_args)
+        values = results['values']
         if args.get('flat') == 'true':
             if values:
                 return values[0]
             else:
                 return ''
         else:
-            return {'item':qid, 'prop':prop, 'values':values}
+            return {'item':qid, 'prop':results['prop'], 'values':values}
 
+    def fetch_property_by_batch(self, args):
+        """
+        Endpoint allowing clients to fetch the values associated
+        to items and a property path.
+        """
+        lang = args.get('lang')
+        if not lang:
+            raise ValueError('No lang provided')
+        prop = args.get('prop')
+        if not prop:
+            raise ValueError('No property provided')
+        path = self.prepare_property({'pid':prop})['path']
+
+        fetch_labels = ((args.get('label') or 'true') == 'true')
+
+        items = args.get('qids','').split('|')
+        items = [to_q(item) for item in items]
+        if None in items:
+            raise ValueError('Invalid Qid provided')
+
+        print(list(items))
+        print(path)
+        values = [
+            path.evaluate(
+                qid,
+                lang=lang,
+                fetch_labels=fetch_labels,
+            ) for qid in items ]
+
+        return {'prop':prop, 'values':values}
 
 

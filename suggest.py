@@ -2,12 +2,17 @@ from itemstore import ItemStore
 from language import language_fallback as lngfb
 from config import preview_height, preview_width, thumbnail_width
 from config import image_properties, this_host
+from config import default_type_entity, property_for_this_type_property
+from utils import to_p
+from propertypath import PropertyFactory
+from sparqlwikidata import sparql_wikidata
+
 import requests
 from bottle import SimpleTemplate
 from bottle import html_escape
 import hashlib
 import re
-from propertypath import PropertyFactory
+from string import Template
 
 def commons_image_url(filename):
     filename = filename.replace(' ', '_')
@@ -150,4 +155,63 @@ class SuggestEngine(object):
 
     def find_entity(self, args):
         return self.find_something(args)
+
+    def propose_properties(self, args):
+        """
+        This method proposes properties to be fetched
+        for a column reconcilied against a particular type (or none)
+        """
+        reconciled_type = (args.get('type') or default_type_entity)
+        limit = int(args.get('limit') or 20)
+        limit = min(limit, 50)
+
+        # This SPARQL query uses GAS (don't worry, it's carbon-free)
+        # https://wiki.blazegraph.com/wiki/index.php/RDF_GAS_API
+        # We use GAS rather than a simple property path to
+        # be able to order by depth, so that the most relevant properties
+        # come first.
+
+        property_for_this_type_property
+        sparql_query = Template("""
+        PREFIX wd: <http://www.wikidata.org/entity/>
+        PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+        PREFIX gas: <http://www.bigdata.com/rdf/gas#>
+        SELECT ?prop ?propLabel ?depth WHERE {
+        SERVICE gas:service {
+            gas:program gas:gasClass "com.bigdata.rdf.graph.analytics.BFS" .
+            gas:program gas:in wd:$base_type .
+            gas:program gas:out ?out .
+            gas:program gas:out1 ?depth .
+            gas:program gas:maxIterations 10 .
+            gas:program gas:maxVisited 100 .
+            gas:program gas:linkType wdt:P279 .
+        }
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "$lang" }
+        ?out wdt:$property_for_this_type ?prop .
+        }
+        ORDER BY ?depth
+        LIMIT $limit
+        """)
+        sparql_query = sparql_query.substitute(
+            base_type=reconciled_type,
+            property_for_this_type=property_for_this_type_property,
+            lang=args['lang'],
+            limit=limit,
+        )
+        results = sparql_wikidata(sparql_query)
+
+        properties = []
+
+        for result in results["bindings"]:
+            pid = to_p(result["prop"]["value"])
+            name = result.get('propLabel', {}).get('value') or pid
+            properties.append({
+                'name': name,
+                'pid': pid,
+            })
+
+        return {
+            'type':reconciled_type,
+            'results':properties
+        }
 

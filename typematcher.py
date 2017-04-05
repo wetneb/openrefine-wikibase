@@ -1,5 +1,5 @@
-from SPARQLWrapper import SPARQLWrapper, JSON
 from utils import to_q
+from sparqlwikidata import sparql_wikidata
 
 class TypeMatcher(object):
     """
@@ -11,7 +11,6 @@ class TypeMatcher(object):
         self.r = redis_client
         self.prefix = 'openrefine_wikidata:children'
         self.ttl = 24*60*60 # 1 day
-        self.sparql = SPARQLWrapper("https://query.wikidata.org/bigdata/namespace/wdq/sparql")
 
     def is_subclass(self, qid_1, qid_2):
         """
@@ -42,11 +41,9 @@ class TypeMatcher(object):
         PREFIX wdt: <http://www.wikidata.org/prop/direct/>
         SELECT ?child WHERE { ?child wdt:P279* wd:%s }
         """ % qid
-        self.sparql.setQuery(sparql_query)
-        self.sparql.setReturnFormat(JSON)
-        results = self.sparql.query().convert()
+        results = sparql_wikidata(sparql_query)
 
-        for result in results["results"]["bindings"]:
+        for result in results["bindings"]:
             child_qid = to_q(result["child"]["value"])
             self.r.sadd(key_name, child_qid)
 

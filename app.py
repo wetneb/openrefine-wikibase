@@ -27,7 +27,7 @@ def jsonp(view):
         callback = args.get('callback')
         try:
             result =  view(args, *posargs, **kwargs)
-        except (ValueError, AttributeError, KeyError) as e:
+        except (KeyError) as e:#ValueError, AttributeError, KeyError) as e:
             result = {'status':'error',
                     'message':'invalid query',
                     'details': str(e)}
@@ -103,6 +103,14 @@ def api(args):
                     'name': reconcile.item_store.get_label('Q35120', lang)
                 }
             ],
+            'augment' : {
+                'propose_properties': {
+                    'url': '/%s/propose_properties',
+                },
+                'add_column': {
+                    'url': '/%s/fetch_property_by_batch',
+                },
+            },
         }
         return identify
 
@@ -171,6 +179,18 @@ def fetch_values(args):
 def fetch_values(args, lang):
     args['lang'] = lang
     return reconcile.fetch_values(args)
+
+@route('/<lang>/propose_properties', method=['GET','POST'])
+@jsonp
+def propose_properties(args, lang):
+    args['lang'] = lang
+    return suggest.propose_properties(args)
+
+@route('/<lang>/fetch_property_by_batch', method=['GET','POST'])
+@jsonp
+def fetch_property_by_batch(args, lang):
+    args['lang'] = lang
+    return reconcile.fetch_property_by_batch(args)
 
 @route('/')
 def home():

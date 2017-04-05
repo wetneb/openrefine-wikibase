@@ -28,6 +28,12 @@ class SuggestEngineTest(unittest.TestCase):
     def preview(self, **kwargs):
         return self.s.preview(kwargs)
 
+    def propose(self, resolved_type, **kwargs):
+        kwargs['type'] = resolved_type
+        if 'lang' not in kwargs:
+            kwargs['lang'] = 'en'
+        return self.s.propose_properties(kwargs)['results']
+
     # Tests start here
 
     def test_exact(self):
@@ -57,6 +63,21 @@ class SuggestEngineTest(unittest.TestCase):
     def test_custom_language(self):
         self.assertTrue('ville' in
             self.preview(id='Q350',lang='fr'))
+
+    def test_propose_property(self):
+        # We follow wdt:P279 to find properties higher up:
+        # number of students (P2196) is marked on "institutional
+        # education", whose "university (Q3918)" is a subclass of.
+        self.assertTrue('P2196' in
+            [p['pid'] for p in self.propose('Q3918')])
+
+        # Check the limits
+        self.assertEqual(len(self.propose('Q3918', limit=10)), 10)
+
+        # Check the language
+        self.assertTrue("nombre d'étudiants" in
+            [p['name'] for p in self.propose('Q3918', lang='fr')])
+
 
 class CommonsImageTest(unittest.TestCase):
 

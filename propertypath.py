@@ -7,12 +7,12 @@ from funcparserlib.parser import NoParseError
 from funcparserlib.lexer import make_tokenizer
 from funcparserlib.lexer import LexerError
 import itertools
-from SPARQLWrapper import SPARQLWrapper, JSON
 from collections import defaultdict
 
 from language import language_fallback
 from utils import to_q
 from utils import to_p
+from sparqlwikidata import sparql_wikidata
 
 property_lexer_specs = [
     ('DOT', (r'\.',)),
@@ -39,7 +39,6 @@ class PropertyFactory(object):
         self.r = self.item_store.r # redis client
         self.unique_ids_key = 'openrefine_wikidata:unique_ids'
         self.ttl = 4*24*60*60 # 4 days
-        self.sparql = SPARQLWrapper("https://query.wikidata.org/bigdata/namespace/wdq/sparql")
 
         self.parser = forward_decl()
 
@@ -118,11 +117,9 @@ class PropertyFactory(object):
         PREFIX wdt: <http://www.wikidata.org/prop/direct/>
         SELECT ?pid WHERE { ?pid wdt:P31/wdt:P279* wd:Q19847637 }
         """
-        self.sparql.setQuery(sparql_query)
-        self.sparql.setReturnFormat(JSON)
-        results = self.sparql.query().convert()
+        results = sparql_wikidata(sparql_query)
 
-        for results in results['results']['bindings']:
+        for results in results['bindings']:
             pid = to_p(results['pid']['value'])
             self.r.sadd(self.unique_ids_key, pid)
 
@@ -270,14 +267,11 @@ class PropertyPath(object):
             lang,
             limit)
 
-        sparql = self.factory.sparql
-        sparql.setQuery(sparql_query)
-        sparql.setReturnFormat(JSON)
-        results = sparql.query().convert()
+        results = sparql_wikidata(sparql_query)
 
         value_to_qid = defaultdict(list)
 
-        for results in results['results']['bindings']:
+        for results in results['bindings']:
             qid = to_q(results['qid']['value'])
             label = results['label'].get('value') or qid
             primary_id = results['value']['value']

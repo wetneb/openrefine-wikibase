@@ -55,3 +55,11 @@ image_properties = [
     'P154',
 ]
 
+# Property proposal settings
+
+# Default type : entity (Q35120)
+default_type_entity = 'Q35120'
+
+# Property to follow to fetch properties for a given type
+property_for_this_type_property = 'P1963'
+
