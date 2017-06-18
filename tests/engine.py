@@ -79,6 +79,16 @@ class ReconcileEngineTest(unittest.TestCase):
                         {'v':'144834915','pid':'P214'}])),
             {'Q34433','Q1377'})
 
+        # If no unique ID match is found, we fall back on
+        # standard matching with same scoring as without
+        # the unique ids (so that we can still get 100%
+        # matches).
+        self.assertEqual(
+            self.results('Warsaw',
+                properties=[{'v':'fictuous id','pid':'P1566'},
+                 {'v':'PL','pid':'P17/P297'}])[0]['score'],
+            100)
+
     def test_items_without_types(self):
         """
         Items without types can be returned only when

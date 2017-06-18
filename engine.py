@@ -254,7 +254,8 @@ class ReconcileEngine(object):
             sum_scores = sum([
                 prop['weighted'] for pid, prop in scored.items()
                 ])
-            total_weight = self.property_weight*len(properties) + 1.0
+            properties_non_unique_ids = len([p for p in properties if not p['unique_id']])
+            total_weight = self.property_weight*properties_non_unique_ids + 1.0
 
             if unique_id_found:
                 avg = 100 # maximum score for matches by unique identifiers
@@ -312,6 +313,27 @@ class ReconcileEngine(object):
         return results['q']
 
     def fetch_values(self, args):
+        """
+        Same as fetch_property_by_batch, but for a single
+        item (more convenient for testing).
+
+        The `flat` parameter can be used to return just
+        the value, without any JSON.
+        """
+        new_args = args.copy()
+        qid = args.get('item', '')
+        new_args['qids'] = qid
+        results = self.fetch_property_by_batch(new_args)
+        values = results['values'][0]
+        if args.get('flat') == 'true':
+            if values:
+                return values[0]
+            else:
+                return ''
+        else:
+            return {'item':qid, 'prop':results['prop'], 'values':values}
+
+    def fetch_property_by_batch(self, args):
         """
         Endpoint allowing clients to fetch the values associated
         to an item and a property path.
