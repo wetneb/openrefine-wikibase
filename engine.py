@@ -6,6 +6,7 @@ from itemstore import ItemStore
 from typematcher import TypeMatcher
 from utils import to_q
 import re
+import math
 from unidecode import unidecode
 from collections import defaultdict
 from language import language_fallback
@@ -23,7 +24,6 @@ class ReconcileEngine(object):
         self.validation_threshold_discount_per_property = 5
         self.match_score_gap = 10
         self.avoid_type = 'Q17442446' # Wikimedia internal stuff
-        self.identifier_re = re.compile(r'\d+')
 
     def match_strings(self, ref, val):
         """
@@ -31,9 +31,6 @@ class ReconcileEngine(object):
         """
         if not ref or not val:
             return 0
-        if (self.identifier_re.match(ref) and
-            self.identifier_re.match(val)):
-            return 100 if ref == val else 0
         ref_q = to_q(ref)
         val_q = to_q(val)
         if ref_q or val_q:
@@ -46,6 +43,22 @@ class ReconcileEngine(object):
         r2 = fuzz.token_sort_ratio(simplified_ref, simplified_val)
         r2 = r1
         return int(0.5*(r1+r2))
+
+    def match_ints(self, ref, val):
+        """
+        Todo
+        """
+        return 100 if ref == val else 0
+
+    def match_floats(self, ref, val):
+        """
+        Todo
+        """
+        diff = math.fabs(ref - val)
+        if diff == 0.:
+            return 100
+        else:
+            return 100*min(1+(1./math.log(diff)), 1.)
 
     def wikidata_string_search(self, query_string, num_results):
         """
@@ -216,7 +229,7 @@ class ReconcileEngine(object):
             unique_id_found = False
             for prop in properties_with_label:
                 prop_id = prop['pid']
-                ref_val = prop['v']
+                ref_val = str(prop['v'])
                 path = prop['path']
                 ends_with_id = prop['ends_with_id']
 
@@ -230,11 +243,21 @@ class ReconcileEngine(object):
 
                 for val in values:
                     if ends_with_id:
-                        curscore = 100 if ref_val == val else 0
+                        curscore = 100 if ref_val == str(val) else 0
+                    elif type(val) == int:
+                        try:
+                            curscore = self.match_ints(int(ref_val), val)
+                        except ValueError:
+                            curscore = 0
+                    elif type(val) == float:
+                        try:
+                            curscore = self.match_floats(float(ref_val), val)
+                        except ValueError:
+                            curscore = 0
                     else:
-                        curscore = self.match_strings(ref_val, val)
+                        curscore = self.match_strings(ref_val, str(val))
                     if curscore > maxscore or bestval is None:
-                        bestval = val
+                        bestval = str(val)
                         maxscore = curscore
 
                 if prop['unique_id'] and maxscore == 100:

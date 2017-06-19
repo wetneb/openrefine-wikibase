@@ -24,6 +24,9 @@ class ReconcileEngineTest(unittest.TestCase):
     def best_match_id(self, *args, **kwargs):
         return self.result_ids(*args, **kwargs)[0]
 
+    def best_score(self, *args, **kwargs):
+        return self.results(*args, **kwargs)[0]['score']
+
     # Tests start here
 
     def test_exact(self):
@@ -84,9 +87,9 @@ class ReconcileEngineTest(unittest.TestCase):
         # the unique ids (so that we can still get 100%
         # matches).
         self.assertEqual(
-            self.results('Warsaw',
+            self.best_score('Warsaw',
                 properties=[{'v':'fictuous id','pid':'P1566'},
-                 {'v':'PL','pid':'P17/P297'}])[0]['score'],
+                 {'v':'PL','pid':'P17/P297'}]),
             100)
 
     def test_items_without_types(self):
@@ -103,6 +106,29 @@ class ReconcileEngineTest(unittest.TestCase):
             len(self.results('Category:Oxford')),
             0)
 
+    def test_subfields(self):
+        # Exact match on the year of birth
+        self.assertEqual(
+            self.best_score("Steve Clark",
+                    typ="Q5",
+                    properties=[{"pid":"P569@year","v":"1943"}]),
+            100)
+        # Inexact match
+        self.assertTrue(
+            self.best_score("Steve Clark",
+                    typ="Q5",
+                    properties=[{"pid":"P569@year","v":"1342"}])
+            < 100)
+
+        # Float that is slightly off gets a non-zero score
+        score = self.best_score("Ramsden",
+                    typ="Q486972",
+                    properties=[{"pid":"P625@lat","v":"51.837"}])
+        print(score)
+        self.assertTrue(score
+            > 80)
+
+
     def test_get_label(self):
         self.assertEqual(
             self.r.item_store.get_label('Q949879', 'en'),
@@ -116,9 +142,6 @@ class ReconcileEngineTest(unittest.TestCase):
         self.assertEqual(
             self.r.match_strings('https://www.wikidata.org/entity/Q1234','Q1234'),
             100)
-        self.assertEqual(
-            self.r.match_strings('12345','1234'),
-            0)
 
         # Matching strings with different case and diacritics
         self.assertEqual(
@@ -141,6 +164,8 @@ class ReconcileEngineTest(unittest.TestCase):
             self.assertEqual(self.r.match_strings(a,b),
                              self.r.match_strings(b,a))
 
+    def test_match_floats(self):
+        self.assertTrue(self.r.match_floats(51.837,51.836) > 50)
 
     def test_fetch_values(self):
         self.assertDictEqual(
