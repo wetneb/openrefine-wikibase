@@ -103,6 +103,22 @@ class PropertyTest(unittest.TestCase):
                         'Q1011981', fetch_labels=False)),
                     {'Q148','Q30'}) # USA + China
 
+    def test_subfields(self):
+        self.assertEqual(
+            self.resolve('P571@year', # inception year
+                        'Q34433'), # oxford
+            [1096])
+
+        self.assertEqual(
+            self.resolve('P585@month', # point in time year
+                        'Q30274958'), # grenfell tower fire
+            [6]) # June
+
+        self.assertEqual(
+            self.resolve('P625@lng', # point in time year
+                        'Q179385'), # Greenwich
+            [0.]) # Reference!
+
     def test_is_unique_identifier(self):
         self.assertTrue(
             self.f.parse('P3500').is_unique_identifier())
