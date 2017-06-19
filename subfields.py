@@ -131,6 +131,65 @@ class DaySubfield(TimeSubfield):
         if precision >= 11:
             return time.day
 
+@register('hour')
+class HourSubfield(TimeSubfield):
+    """
+    >>> HourSubfield()({"value": {"time": "+1996-03-17T04:00:00Z", "precision": 12}})
+    4
+    >>> HourSubfield()({"value": {"time": "+1996-03-17T00:00:00Z", "precision": 11}}) is None
+    True
+    """
+    def run(self, time, precision):
+        if precision >= 12:
+            return time.hour
+
+@register('minute')
+class MinuteSubfield(TimeSubfield):
+    """
+    >>> MinuteSubfield()({"value": {"time": "+1996-03-17T04:15:00Z", "precision": 13}})
+    15
+    >>> MinuteSubfield()({"value": {"time": "+1996-03-17T04:00:00Z", "precision": 12}}) is None
+    True
+    """
+    def run(self, time, precision):
+        if precision >= 13:
+            return time.minute
+
+@register('second')
+class SecondSubfield(TimeSubfield):
+    """
+    >>> SecondSubfield()({"value": {"time": "+1996-03-17T04:15:08Z", "precision": 14}})
+    8
+    >>> SecondSubfield()({"value": {"time": "+1996-03-17T04:15:00Z", "precision": 13}}) is None
+    True
+    """
+    def run(self, time, precision):
+        if precision >= 14:
+            return time.second
+
+@register('isodate')
+class IsoDateSubfield(TimeSubfield):
+    """
+    >>> IsoDateSubfield()({"value": {"time": "+1996-03-17T04:15:08Z", "precision": 14}})
+    '1996-03-17'
+    >>> IsoDateSubfield()({"value": {"time": "+1996-03-17T04:15:00Z", "precision": 5}})
+    '1996-03-17'
+    """
+    def run(self, time, precision):
+        return time.date().isoformat()
+
+@register('iso')
+class IsoSubfield(TimeSubfield):
+    """
+    >>> IsoSubfield()({"value": {"time": "+1996-03-17T04:15:08Z", "precision": 14}})
+    '1996-03-17T04:15:08+00:00'
+    >>> IsoSubfield()({"value": {"time": "+1996-03-17T04:15:00Z", "precision": 5}})
+    '1996-03-17T04:15:00+00:00'
+    """
+    def run(self, time, precision):
+        return time.isoformat()
+
+
 import doctest
 def load_tests(loader, tests, ignore):
     tests.addTests(doctest.DocTestSuite())
