@@ -165,7 +165,10 @@ class ReconcileEngineTest(unittest.TestCase):
                              self.r.match_strings(b,a))
 
     def test_match_floats(self):
+        self.assertEqual(self.r.match_floats(51.837,51.837), 100)
         self.assertTrue(self.r.match_floats(51.837,51.836) > 50)
+        self.assertTrue(self.r.match_floats(51.837,151.836) < 50)
+        self.assertTrue(self.r.match_floats(0.837,1509.836) < 20)
 
     def test_fetch_values(self):
         self.assertDictEqual(

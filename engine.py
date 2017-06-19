@@ -58,7 +58,8 @@ class ReconcileEngine(object):
         if diff == 0.:
             return 100
         else:
-            return 100*min(1+(1./math.log(diff)), 1.)
+            logdiff = math.log(diff)
+            return 100*(math.atan(-logdiff)/math.pi + 0.5)
 
     def wikidata_string_search(self, query_string, num_results):
         """
