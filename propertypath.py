@@ -13,6 +13,7 @@ from language import language_fallback
 from utils import to_q
 from utils import to_p
 from sparqlwikidata import sparql_wikidata
+from subfields import subfield_factory
 
 property_lexer_specs = [
     ('DOT', (r'\.',)),
@@ -21,6 +22,8 @@ property_lexer_specs = [
     ('PIPE', (r'\|',)),
     ('LBRA', (r'\(',)),
     ('RBRA', (r'\)',)),
+    ('AT', (r'@',)),
+    ('SUBFIELD', (r'[a-z]+',)),
 ]
 tokenize_property = make_tokenizer(property_lexer_specs)
 
@@ -43,6 +46,7 @@ class PropertyFactory(object):
         self.parser = forward_decl()
 
         atomic = forward_decl()
+        atomic_subfield = forward_decl()
         concat_path = forward_decl()
         pipe_path = forward_decl()
 
@@ -52,9 +56,14 @@ class PropertyFactory(object):
             (st('LBRA') + pipe_path + st('RBRA'))
         )
 
-        concat_path.define(
-            ((atomic + st('SLASH') + concat_path) >> self.make_slash) |
+        atomic_subfield.define(
+            (atomic + st('AT') + t('SUBFIELD') >> self.make_subfield) |
             atomic
+        )
+
+        concat_path.define(
+            ((atomic_subfield + st('SLASH') + concat_path) >> self.make_slash) |
+            atomic_subfield
         )
 
         pipe_path.define(
@@ -82,6 +91,9 @@ class PropertyFactory(object):
 
     def make_pipe(self, lst):
         return DisjunctedPropertyPath(self, lst[0], lst[1])
+
+    def make_subfield(self, lst):
+        return SubfieldPropertyPath(self, lst[0], lst[1].value)
 
     def parse(self, property_path_string):
         """
@@ -181,7 +193,7 @@ class PropertyPath(object):
         values = self.step(item)
         if fetch_labels:
             values = itertools.chain(
-                *map(fetch_label, values)
+                *list(map(fetch_label, values))
             )
 
         return list(values)
@@ -381,3 +393,24 @@ class DisjunctedPropertyPath(PropertyPath):
     def ends_with_identifier(self):
         return (self.a.ends_with_identifier() and
                 self.b.ends_with_identifier())
+
+class SubfieldPropertyPath(PropertyPath):
+    """
+    A property path that returns a subfield of another property path
+    """
+    def __init__(self, factory, path, subfield):
+        super(SubfieldPropertyPath, self).__init__(factory)
+        self.path = path
+        self.subfield = subfield
+
+    def step(self, v):
+        orig_values = list(self.path.step(v))
+        images_values = list(map(lambda val: subfield_factory.run(self.subfield, val), orig_values))
+        return (val for val in images_values if val is not None)
+
+    def uniform_depth(self):
+        raise ValueError('One property bears a subfield')
+
+    def ends_with_identifier(self):
+        return False
+

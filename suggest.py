@@ -48,7 +48,7 @@ def autodescribe(qid, lang):
 class SuggestEngine(object):
     def __init__(self, redis_client):
         self.r = redis_client
-        self.property_path_re = re.compile(r'(SPARQL ?:? ?)?(\(*P\d+[/\|].*)$')
+        self.property_path_re = re.compile(r'(SPARQL ?:? ?)?(\(*P\d+[/\|@].*)$')
         self.store = ItemStore(self.r)
         self.ft = PropertyFactory(self.store)
         self.store.ttl = 24*60*60 # one day
