@@ -158,7 +158,7 @@ class PropertyPath(object):
     def evaluate(self, item, lang=None, fetch_labels=True):
         """
         Evaluates the property path on the
-        given item. Returns a list of values.
+        given item. Returns a list of WikidataValue.
 
         :param lang: the language to use, if any labels are fetched
         :param fetch_labels: should we returns items or labels?

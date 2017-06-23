@@ -110,7 +110,7 @@ def api(args):
                 },
                 'fetch_column': {
                     'service_url' : this_host,
-                    'service_path' : '/%s/fetch_property_by_batch' % lang,
+                    'service_path' : '/%s/fetch_properties_by_batch' % lang,
                 },
             },
         }
@@ -193,6 +193,13 @@ def propose_properties(args, lang):
 def fetch_property_by_batch(args, lang):
     args['lang'] = lang
     return reconcile.fetch_property_by_batch(args)
+
+@route('/<lang>/fetch_properties_by_batch', method=['GET','POST'])
+@jsonp
+def fetch_property_by_batch(args, lang):
+    args['lang'] = lang
+    args['query'] = json.loads(args.get('query', '{}'))
+    return reconcile.fetch_properties_by_batch(args)
 
 @route('/')
 def home():

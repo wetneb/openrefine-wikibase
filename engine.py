@@ -6,6 +6,7 @@ from itemstore import ItemStore
 from typematcher import TypeMatcher
 from utils import to_q
 import re
+import json
 from unidecode import unidecode
 from collections import defaultdict
 from language import language_fallback
@@ -348,7 +349,7 @@ class ReconcileEngine(object):
 
         fetch_labels = ((args.get('label') or 'true') == 'true')
 
-        items = args.get('qids','').split('|')
+        items = args.get('ids','').split('|')
         items = [to_q(item) for item in items]
         if None in items:
             raise ValueError('Invalid Qid provided')
@@ -363,5 +364,34 @@ class ReconcileEngine(object):
             ) for qid in items ]
 
         return {'prop':prop, 'values':values}
+
+    def fetch_properties_by_batch(self, args):
+        """
+        Endpoint allowing clients to fetch multiple properties
+        (or property paths) on multiple items, simultaneously.
+        """
+        lang = args.get('lang')
+        if not lang:
+            raise ValueError('No lang provided')
+
+        query = args.get('query', {})
+
+        # Qids of the items to fetch
+        ids = query.get('ids', [])
+
+        # Property paths to fetch
+        props = query.get('properties', [])
+
+        # TODO: this could be streamlined in just one SPARQL query
+        columns = [
+            self.fetch_property_by_batch(
+                {'lang':lang,
+                 'prop':prop,
+                 'ids':ids})
+            for prop in props
+        ]
+        return {
+            'columns': columns
+        }
 
 
