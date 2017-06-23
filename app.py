@@ -103,12 +103,14 @@ def api(args):
                     'name': reconcile.item_store.get_label('Q35120', lang)
                 }
             ],
-            'augment' : {
+            'extend' : {
                 'propose_properties': {
-                    'url': '/%s/propose_properties',
+                    'service_url' : this_host,
+                    'service_path' : '/%s/propose_properties' % lang,
                 },
-                'add_column': {
-                    'url': '/%s/fetch_property_by_batch',
+                'fetch_column': {
+                    'service_url' : this_host,
+                    'service_path' : '/%s/fetch_property_by_batch' % lang,
                 },
             },
         }

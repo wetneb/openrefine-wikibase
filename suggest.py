@@ -207,11 +207,11 @@ class SuggestEngine(object):
             name = result.get('propLabel', {}).get('value') or pid
             properties.append({
                 'name': name,
-                'pid': pid,
+                'id': pid,
             })
 
         return {
             'type':reconciled_type,
-            'results':properties
+            'properties':properties
         }
 
