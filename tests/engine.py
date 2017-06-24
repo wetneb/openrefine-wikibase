@@ -1,4 +1,3 @@
-
 import unittest
 from engine import ReconcileEngine
 from config import redis_client
@@ -133,42 +132,6 @@ class ReconcileEngineTest(unittest.TestCase):
         self.assertEqual(
             self.r.item_store.get_label('Q949879', 'en'),
             'Elf')
-
-    def test_match_strings(self):
-        # Matching identifiers
-        self.assertEqual(
-            self.r.match_strings('Q1234','R1234'),
-            0)
-        self.assertEqual(
-            self.r.match_strings('https://www.wikidata.org/entity/Q1234','Q1234'),
-            100)
-
-        # Matching strings with different case and diacritics
-        self.assertEqual(
-            self.r.match_strings('Février','Fevrier'),
-            100)
-        self.assertTrue(
-            self.r.match_strings('PEMBERLEY','Pemberley') > 90)
-
-        # Match urls
-        self.assertTrue(
-            self.r.match_strings('gnu.org', 'http://gnu.org') > 50)
-
-    def test_match_strings_symmetric(self):
-        pairs = [('a','b c'),
-                ('aa bb', 'b aa'),
-                ('a b', 'b c'),
-                ('small birch tree','BirchTree'),
-                ]
-        for a, b in pairs:
-            self.assertEqual(self.r.match_strings(a,b),
-                             self.r.match_strings(b,a))
-
-    def test_match_floats(self):
-        self.assertEqual(self.r.match_floats(51.837,51.837), 100)
-        self.assertTrue(self.r.match_floats(51.837,51.836) > 50)
-        self.assertTrue(self.r.match_floats(51.837,151.836) < 50)
-        self.assertTrue(self.r.match_floats(0.837,1509.836) < 20)
 
     def test_fetch_values(self):
         self.assertDictEqual(

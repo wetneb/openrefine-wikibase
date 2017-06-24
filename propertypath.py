@@ -14,6 +14,7 @@ from utils import to_q
 from utils import to_p
 from sparqlwikidata import sparql_wikidata
 from subfields import subfield_factory
+from wikidatavalue import WikidataValue
 
 property_lexer_specs = [
     ('DOT', (r'\.',)),
@@ -156,39 +157,34 @@ class PropertyPath(object):
 
     def get_item(self, item):
         """
-        Helper coercing a value to an item.
-        If it is already a dict, it is returned
-        untouched. Otherwise we convert it to a
-        Wikidata id and fetch it.
+        Helper coercing an ItemValue to
+        the dict representing the item.
         """
-        if type(item) == dict:
-            return item
-        qid = to_q(item)
-        if qid:
-            return self.item_store.get_item(qid)
+        if not item.value_type == "wikibase-item":
+            raise ValueError("get_item expects an ItemValue")
+        return self.item_store.get_item(item.id)
 
-    def evaluate(self, item, lang=None, fetch_labels=True):
+    def evaluate(self, item):
         """
         Evaluates the property path on the
-        given item. Returns a list of WikidataValue.
+        given item, and returns its labels.
 
         :param lang: the language to use, if any labels are fetched
         :param fetch_labels: should we returns items or labels?
         """
 
         def fetch_label(v):
+            if v.value_type != 'wikibase-item':
+                return [v]
             item = self.get_item(v)
+
+
             if not item:
                 return [v] # this is already a value
 
-            if not lang:
-                # return all labels and aliases
-                labels = list(item.get('labels', {}).values())
-                aliases = item.get('aliases', [])
-                return labels+aliases
-            else:
-                labels = item.get('labels', {})
-                return [language_fallback(labels, lang)]
+            labels = list(item.get('labels', {}).values())
+            aliases = item.get('aliases', [])
+            return labels+aliases
 
         values = self.step(item)
         if fetch_labels:
@@ -324,8 +320,10 @@ class LeafProperty(PropertyPath):
         self.pid = pid
 
     def step(self, v):
+        if v.value_type != 'wikibase-item':
+            return []
         item = self.get_item(v)
-        return item.get(self.pid, [])
+        return map(WikidataValue.from_datavalue, item.get(self.pid, []))
 
     def __str__(self, add_prefix=False):
         prefix = 'wdt:' if add_prefix else ''

@@ -3,6 +3,7 @@ import unittest
 from propertypath import PropertyFactory
 from propertypath import tokenize_property
 from funcparserlib.lexer import Token
+from wikidatavalue import QuantityValue, ItemValue, IdentifierValue
 from itemstore import ItemStore
 from config import redis_client
 
@@ -46,78 +47,63 @@ class PropertyTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.f.parse('(P78/P17') # parsing error
 
-    def resolve(self, exp, qid, **kwargs):
+    def resolve(self, exp, qid):
         path = self.f.parse(exp)
-        return path.evaluate(qid, **kwargs)
+        return list(path.step(ItemValue(id=qid)))
 
     def test_resolve_property_path(self):
         self.assertEqual(
             self.resolve('P297', 'Q142'),
-            ['FR'])
+            [IdentifierValue(value='FR')])
 
         self.assertEqual(
             self.resolve('P17/P297', 'Q83259'),
-            ['FR'])
+            [IdentifierValue(value='FR')])
 
-        self.assertTrue(
-            'France' in
-            self.resolve('P17', 'Q83259')
-        )
-
-        self.assertTrue(
-            'International Journal of Medical Sciences' in
-            self.resolve('P1433', 'Q24791449')
-        )
-
-        # With preferred language
         self.assertEqual(
-            self.resolve('P17', 'Q83259', lang='de'),
-            ['Frankreich'])
-
-        # Without resolving labels
-        self.assertEqual(
-            self.resolve('P17', 'Q34433', fetch_labels=False),
-            ['Q145'])
+            self.resolve('P17', 'Q83259'),
+            [ItemValue(id='Q142')]
+        )
 
         # With dot
         self.assertEqual(
-            self.resolve('./P2427', 'Q34433', fetch_labels=False),
-                ['grid.4991.5'])
+            self.resolve('./P2427', 'Q34433'),
+                [IdentifierValue(value='grid.4991.5')])
         self.assertEqual(
-            self.resolve('P2427/.', 'Q34433', fetch_labels=False),
-                ['grid.4991.5'])
+            self.resolve('P2427/.', 'Q34433'),
+                [IdentifierValue(value='grid.4991.5')])
 
         # With disjunction
         self.assertSetEqual(
             set(self.resolve('P17', # country
                         'Q1011981', # google china
-                        fetch_labels=False)),
-                    {'Q148'}) # china
+                        )),
+                    {ItemValue(id='Q148')}) # china
         self.assertSetEqual(
             set(self.resolve('P749/P17', # parent org. / country
                         'Q1011981', # google china
-                         fetch_labels=False)),
-                    {'Q30'}) # USA
+                         )),
+                    {ItemValue(id='Q30')}) # USA
         self.assertSetEqual(
             set(self.resolve('P17|(P749/P17)', # brackets not actually needed
-                        'Q1011981', fetch_labels=False)),
-                    {'Q148','Q30'}) # USA + China
+                        'Q1011981')),
+                    {ItemValue(id='Q148'),ItemValue(id='Q30')}) # USA + China
 
     def test_subfields(self):
         self.assertEqual(
             self.resolve('P571@year', # inception year
                         'Q34433'), # oxford
-            [1096])
+            [QuantityValue(quantity=1096)])
 
         self.assertEqual(
             self.resolve('P585@month', # point in time year
                         'Q30274958'), # grenfell tower fire
-            [6]) # June
+            [QuantityValue(quantity=6)]) # June
 
         self.assertEqual(
             self.resolve('P625@lng', # point in time year
                         'Q179385'), # Greenwich
-            [0.]) # Reference!
+            [QuantityValue(quantity=0)]) # Reference!
 
     def test_is_unique_identifier(self):
         self.assertTrue(

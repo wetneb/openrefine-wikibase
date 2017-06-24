@@ -1,17 +1,15 @@
 from config import *
 import requests
 import itertools
-from fuzzywuzzy import fuzz
 from itemstore import ItemStore
 from typematcher import TypeMatcher
 from utils import to_q
 import re
 import json
-import math
-from unidecode import unidecode
 from collections import defaultdict
 from language import language_fallback
 from propertypath import PropertyFactory
+from wikidatavalue import ItemValue
 
 class ReconcileEngine(object):
     """
@@ -25,42 +23,7 @@ class ReconcileEngine(object):
         self.validation_threshold_discount_per_property = 5
         self.match_score_gap = 10
         self.avoid_type = 'Q17442446' # Wikimedia internal stuff
-
-    def match_strings(self, ref, val):
-        """
-        Returns the matching score of two values.
-        """
-        if not ref or not val:
-            return 0
-        ref_q = to_q(ref)
-        val_q = to_q(val)
-        if ref_q or val_q:
-            return 100 if ref_q == val_q else 0
-        simplified_val = unidecode(val).lower()
-        simplified_ref = unidecode(ref).lower()
-
-        # Return symmetric score
-        r1 = fuzz.token_sort_ratio(simplified_val, simplified_ref)
-        r2 = fuzz.token_sort_ratio(simplified_ref, simplified_val)
-        r2 = r1
-        return int(0.5*(r1+r2))
-
-    def match_ints(self, ref, val):
-        """
-        Todo
-        """
-        return 100 if ref == val else 0
-
-    def match_floats(self, ref, val):
-        """
-        Todo
-        """
-        diff = math.fabs(ref - val)
-        if diff == 0.:
-            return 100
-        else:
-            logdiff = math.log(diff)
-            return 100*(math.atan(-logdiff)/math.pi + 0.5)
+        self.p31_property_path = self.pf.parse('P31')
 
     def wikidata_string_search(self, query_string, num_results):
         """
@@ -203,8 +166,10 @@ class ReconcileEngine(object):
 
         types_to_prefetch = set()
         for qid, item in items.items():
+            itemvalue = ItemValue(id=qid)
+
             # Check the type if we have a type constraint
-            current_types = item.get('P31', [])
+            current_types = [val.id for val in self.p31_property_path.step(itemvalue)]
             type_found = len(current_types) > 0
 
             if target_types:
@@ -237,29 +202,13 @@ class ReconcileEngine(object):
 
                 maxscore = 0
                 bestval = None
-                ref_qid = to_q(ref_val)
-                values = path.evaluate(
-                            item,
-                            fetch_labels=ref_qid is None,
-                            lang=None) # match with all labels
+                values = path.step(
+                            ItemValue(id=qid))
 
                 for val in values:
-                    if ends_with_id:
-                        curscore = 100 if ref_val == str(val) else 0
-                    elif type(val) == int:
-                        try:
-                            curscore = self.match_ints(int(ref_val), val)
-                        except ValueError:
-                            curscore = 0
-                    elif type(val) == float:
-                        try:
-                            curscore = self.match_floats(float(ref_val), val)
-                        except ValueError:
-                            curscore = 0
-                    else:
-                        curscore = self.match_strings(ref_val, str(val))
+                    curscore = val.match_with_str(ref_val, self.item_store)
                     if curscore > maxscore or bestval is None:
-                        bestval = str(val)
+                        bestval = val
                         maxscore = curscore
 
                 if prop['unique_id'] and maxscore == 100:
@@ -292,7 +241,7 @@ class ReconcileEngine(object):
 
             scored['id'] = qid
             scored['name'] = self.item_store.get_label(qid, default_language)
-            scored['type'] = item.get('P31', [])
+            scored['type'] = current_types
             types_to_prefetch |= set(scored['type'])
             scored['match'] = False # will be changed later
 
@@ -363,6 +312,7 @@ class ReconcileEngine(object):
         Endpoint allowing clients to fetch the values associated
         to items and a property path.
         """
+        print(args)
         lang = args.get('lang')
         if not lang:
             raise ValueError('No lang provided')

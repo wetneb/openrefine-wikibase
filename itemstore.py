@@ -139,16 +139,8 @@ class ItemStore(object):
                 key=lambda c: 0 if c.get('rank') == 'preferred' else 1)
 
             for claim in ordered_claims:
-                dataval = claim.get('mainsnak', {}
-                        ).get('datavalue', {})
-                val = dataval.get('value')
-                if type(val) == dict:
-                    if dataval.get('type') == 'wikibase-entityid':
-                        values.append(val.get('id'))
-                    else:
-                        values.append(dataval)
-                else:
-                    values.append(str(val))
+                dataval = claim.get('mainsnak', {})
+                values.append(dataval)
             simplified[prop_id] = values
 
         return simplified

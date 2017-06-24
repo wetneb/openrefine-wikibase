@@ -1,4 +1,5 @@
-import dateutil.parser
+from wikidatavalue import CoordsValue, QuantityValue, UndefinedValue, TimeValue, IdentifierValue
+
 
 class SubfieldFactory(object):
     """
@@ -51,6 +52,20 @@ class Subfield(object):
         This runs the subfield extractor on
         a value extracted from the property path.
         """
+        v = self.run(value)
+        if v is None:
+            return UndefinedValue()
+        else:
+            return v
+
+    def run(self, value):
+        """
+        This is the method to be reimplemented by
+        subclasses. It takes a WikidataValue as input
+        and returns either a transformed WikidataValue,
+        or None (in which case an UndefinedValue() will
+        be returned by __call__).
+        """
         raise NotImplemented
 
 @register('lat')
@@ -58,137 +73,120 @@ class LatSubfield(Subfield):
     """
     Extracts the latitude from coordinate locations
 
-    >>> LatSubfield()({"value": {"latitude": 47.521681,"longitude": 19.006213}})
-    47.521681
+    >>> LatSubfield()(CoordsValue(latitude=47.521681,longitude=19.006213))
+    QuantityValue(quantity=47.521681)
     """
-    expects_types = ['globecoordinate']
+    expects_types = ['globe-coordinate']
 
-    def __call__(self, val):
-        return val.get('value', {}).get('latitude')
+    def run(self, val):
+        return QuantityValue(quantity=val.latitude)
 
 @register('lng')
 class LngSubfield(Subfield):
     """
     Extracts the longitude from coordinate locations
 
-    >>> LngSubfield()({"value": {"latitude": 47.521681,"longitude": 19.006213}})
-    19.006213
+    >>> LngSubfield()(CoordsValue(latitude=47.521681,longitude=19.006213))
+    QuantityValue(quantity=19.006213)
     """
-    expects_types = ['globecoordinate']
+    expects_types = ['globe-coordinate']
 
-    def __call__(self, val):
-        return val.get('value', {}).get('longitude')
-
-class TimeSubfield(Subfield):
-    """
-    Generic subfield to extract stuff from times
-    """
-    expects_types = ['time']
-
-    def __call__(self, val):
-        time = val.get('value', {}).get('time')
-        if time.startswith('+'):
-            time = time[1:]
-        precision = val.get('value', {}).get('precision') or 1
-        try:
-            return self.run(dateutil.parser.parse(time), precision)
-        except ValueError:
-            pass
+    def run(self, val):
+        return QuantityValue(quantity=val.longitude)
 
 @register('year')
-class YearSubfield(TimeSubfield):
+class YearSubfield(Subfield):
     """
-    >>> YearSubfield()({"value": {"time": "+1096-01-01T00:00:00Z", "precision": 9}})
-    1096
-    >>> YearSubfield()({"value": {"time": "+1096-01-01T00:00:00Z", "precision": 8}}) is None
-    True
+    >>> YearSubfield()(TimeValue(time="+1096-01-01T00:00:00Z", precision=9))
+    QuantityValue(quantity=1096)
+    >>> YearSubfield()(TimeValue(time="+1096-01-01T00:00:00Z", precision=8))
+    UndefinedValue()
     """
-    def run(self, time, precision):
-        if precision >= 9:
-            return time.year
+    def run(self, val):
+        if val.precision >= 9:
+            return QuantityValue(quantity=val.parsed.year)
 
 @register('month')
-class MonthSubfield(TimeSubfield):
+class MonthSubfield(Subfield):
     """
-    >>> MonthSubfield()({"value": {"time": "+1896-03-01T00:00:00Z", "precision": 10}})
-    3
-    >>> MonthSubfield()({"value": {"time": "+1896-01-01T00:00:00Z", "precision": 9}}) is None
-    True
+    >>> MonthSubfield()(TimeValue(time="+1896-03-01T00:00:00Z", precision=10))
+    QuantityValue(quantity=3)
+    >>> MonthSubfield()(TimeValue(time="+1896-01-01T00:00:00Z", precision=9))
+    UndefinedValue()
     """
-    def run(self, time, precision):
-        if precision >= 10:
-            return time.month
+    def run(self, val):
+        if val.precision >= 10:
+            return QuantityValue(quantity=val.parsed.month)
 
 @register('day')
-class DaySubfield(TimeSubfield):
+class DaySubfield(Subfield):
     """
-    >>> DaySubfield()({"value": {"time": "+1996-03-17T00:00:00Z", "precision": 11}})
-    17
-    >>> DaySubfield()({"value": {"time": "+1996-03-17T00:00:00Z", "precision": 10}}) is None
-    True
+    >>> DaySubfield()(TimeValue(time="+1996-03-17T00:00:00Z", precision=11))
+    QuantityValue(quantity=17)
+    >>> DaySubfield()(TimeValue(time="+1996-03-17T00:00:00Z", precision=10))
+    UndefinedValue()
     """
-    def run(self, time, precision):
-        if precision >= 11:
-            return time.day
+    def run(self, val):
+        if val.precision >= 11:
+            return QuantityValue(quantity=val.parsed.day)
 
 @register('hour')
-class HourSubfield(TimeSubfield):
+class HourSubfield(Subfield):
     """
-    >>> HourSubfield()({"value": {"time": "+1996-03-17T04:00:00Z", "precision": 12}})
-    4
-    >>> HourSubfield()({"value": {"time": "+1996-03-17T00:00:00Z", "precision": 11}}) is None
-    True
+    >>> HourSubfield()(TimeValue(time="+1996-03-17T04:00:00Z", precision=12))
+    QuantityValue(quantity=4)
+    >>> HourSubfield()(TimeValue(time="+1996-03-17T00:00:00Z", precision=11))
+    UndefinedValue()
     """
-    def run(self, time, precision):
-        if precision >= 12:
-            return time.hour
+    def run(self, val):
+        if val.precision >= 12:
+            return QuantityValue(quantity=val.parsed.hour)
 
 @register('minute')
-class MinuteSubfield(TimeSubfield):
+class MinuteSubfield(Subfield):
     """
-    >>> MinuteSubfield()({"value": {"time": "+1996-03-17T04:15:00Z", "precision": 13}})
-    15
-    >>> MinuteSubfield()({"value": {"time": "+1996-03-17T04:00:00Z", "precision": 12}}) is None
-    True
+    >>> MinuteSubfield()(TimeValue(time="+1996-03-17T04:15:00Z", precision=13))
+    QuantityValue(quantity=15)
+    >>> MinuteSubfield()(TimeValue(time="+1996-03-17T04:00:00Z", precision=12))
+    UndefinedValue()
     """
-    def run(self, time, precision):
-        if precision >= 13:
-            return time.minute
+    def run(self, val):
+        if val.precision >= 13:
+            return QuantityValue(quantity=val.parsed.minute)
 
 @register('second')
-class SecondSubfield(TimeSubfield):
+class SecondSubfield(Subfield):
     """
-    >>> SecondSubfield()({"value": {"time": "+1996-03-17T04:15:08Z", "precision": 14}})
-    8
-    >>> SecondSubfield()({"value": {"time": "+1996-03-17T04:15:00Z", "precision": 13}}) is None
-    True
+    >>> SecondSubfield()(TimeValue(time="+1996-03-17T04:15:08Z", precision=14))
+    QuantityValue(quantity=8)
+    >>> SecondSubfield()(TimeValue(time="+1996-03-17T04:15:00Z", precision=13))
+    UndefinedValue()
     """
-    def run(self, time, precision):
-        if precision >= 14:
-            return time.second
+    def run(self, val):
+        if val.precision >= 14:
+            return QuantityValue(quantity=val.parsed.second)
 
 @register('isodate')
-class IsoDateSubfield(TimeSubfield):
+class IsoDateSubfield(Subfield):
     """
-    >>> IsoDateSubfield()({"value": {"time": "+1996-03-17T04:15:08Z", "precision": 14}})
-    '1996-03-17'
-    >>> IsoDateSubfield()({"value": {"time": "+1996-03-17T04:15:00Z", "precision": 5}})
-    '1996-03-17'
+    >>> IsoDateSubfield()(TimeValue(time="+1996-03-17T04:15:08Z", precision=14))
+    IdentifierValue(value='1996-03-17')
+    >>> IsoDateSubfield()(TimeValue(time="+1996-03-17T04:15:00Z", precision=5))
+    IdentifierValue(value='1996-03-17')
     """
-    def run(self, time, precision):
-        return time.date().isoformat()
+    def run(self, val):
+        return IdentifierValue(value=val.parsed.date().isoformat())
 
 @register('iso')
-class IsoSubfield(TimeSubfield):
+class IsoSubfield(Subfield):
     """
-    >>> IsoSubfield()({"value": {"time": "+1996-03-17T04:15:08Z", "precision": 14}})
-    '1996-03-17T04:15:08+00:00'
-    >>> IsoSubfield()({"value": {"time": "+1996-03-17T04:15:00Z", "precision": 5}})
-    '1996-03-17T04:15:00+00:00'
+    >>> IsoSubfield()(TimeValue(time="+1996-03-17T04:15:08Z", precision=14))
+    IdentifierValue(value='1996-03-17T04:15:08+00:00')
+    >>> IsoSubfield()(TimeValue(time="+1996-03-17T04:15:00Z", precision=5))
+    IdentifierValue(value='1996-03-17T04:15:00+00:00')
     """
-    def run(self, time, precision):
-        return time.isoformat()
-
+    def run(self, val):
+        return IdentifierValue(value=val.parsed.isoformat())
 
 import doctest
 def load_tests(loader, tests, ignore):

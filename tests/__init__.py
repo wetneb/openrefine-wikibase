@@ -3,3 +3,4 @@ from .itemstore import *
 from .engine import *
 from .suggest import *
 from .propertypath import *
+from .utils import *
