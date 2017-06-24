@@ -91,6 +91,39 @@ class PropertyTest(unittest.TestCase):
                         'Q1011981')),
                     {ItemValue(id='Q148'),ItemValue(id='Q30')}) # USA + China
 
+    def value_types(self, path, qid):
+        return {v.value_type
+            for v in self.resolve(path, qid)}
+
+    def test_value_types(self):
+        self.assertEqual(
+            self.value_types('P571', 'Q34433'),
+            {'time'})
+
+        self.assertEqual(
+            self.value_types('P625', 'Q142'),
+            {"globe-coordinate"})
+
+        self.assertEqual(
+            self.value_types('P2427', 'Q34433'),
+            {"external-id"})
+
+        self.assertEqual(
+            self.value_types('P856', 'Q34433'),
+            {"url"})
+
+        self.assertEqual(
+            self.value_types('P31', 'Q34433'),
+            {"wikibase-item"})
+
+        self.assertEqual(
+            self.value_types('P1477', 'Q42'),
+            {"monolingualtext"})
+
+        self.assertEqual(
+            self.value_types('P18', 'Q34433'),
+            {"commonsMedia"})
+
     def test_subfields(self):
         self.assertEqual(
             self.resolve('P571@year', # inception year

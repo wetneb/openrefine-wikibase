@@ -167,7 +167,7 @@ class UrlValue(WikidataValue):
 
     @classmethod
     def from_datavalue(self, wd_repr):
-        return UrlValue(value=wd_repr('value', {}))
+        return UrlValue(value=wd_repr.get('value', {}))
 
     def match_with_str(self, s, item_store):
         # no value
@@ -240,8 +240,8 @@ class IdentifierValue(WikidataValue):
     value_type = "external-id"
 
     @classmethod
-    def from_datavalue(self, wd_repr):
-        return IdentifierValue(
+    def from_datavalue(cls, wd_repr):
+        return cls(
                 value=wd_repr.get('value', {}))
 
     def match_with_str(self, s, item_store):
@@ -249,7 +249,6 @@ class IdentifierValue(WikidataValue):
 
     def as_string(self):
         return self.json.get('value', '')
-
 
 @register
 class QuantityValue(WikidataValue):
@@ -266,8 +265,8 @@ class QuantityValue(WikidataValue):
             self.quantity = float(self.quantity)
 
     @classmethod
-    def from_datavalue(self, wd_repr):
-        return QuantityValue(**val)
+    def from_datavalue(cls, wd_repr):
+        return cls(**wd_repr)
 
     def match_with_str(self, s, item_store):
         try:
@@ -279,6 +278,29 @@ class QuantityValue(WikidataValue):
 
     def as_string(self):
         return str(self.json.get('quantity', ''))
+
+@register
+class MonolingualValue(WikidataValue):
+    """
+    Fields:
+    - text (string)
+    - language (string)
+    """
+    value_type = "monolingualtext"
+
+    @classmethod
+    def from_datavalue(cls, wd_repr):
+        return cls(**wd_repr)
+
+    def match_with_str(self, s, item_store):
+        ref_val = self.json.get('text')
+        if not ref_val:
+            return 0
+        return fuzzy_match_strings(ref_val, s)
+
+    def as_string(self):
+        return self.json.get('text') or ''
+
 
 @register
 class TimeValue(WikidataValue):
@@ -305,8 +327,8 @@ class TimeValue(WikidataValue):
             self.parsed = None
 
     @classmethod
-    def from_datavalue(self, wd_repr):
-        return TimeValue(**wd_repr.get('value', {}))
+    def from_datavalue(cls, wd_repr):
+        return cls(**wd_repr.get('value', {}))
 
     def match_with_str(self, s, item_store):
         # TODO convert to a timestamp
@@ -318,22 +340,20 @@ class TimeValue(WikidataValue):
         return str(self.json.get('time', ''))
 
 @register
-class MediaValue(WikidataValue):
+class MediaValue(IdentifierValue):
     """
     Fields:
     - value
     """
     value_type = "commonsMedia"
 
-    @classmethod
-    def from_datavalue(self, wd_repr):
-        return MediaValue(**wd_repr)
-
-    def match_with_str(self, s, item_store):
-        return 100 if s == self.json.get('value') else 0
-
-    def as_string(self):
-        return self.json.get('value', '')
+@register
+class DataTableValue(IdentifierValue):
+    """
+    Fields:
+    - value (string)
+    """
+    value_type = "tabular-data"
 
 class UndefinedValue(WikidataValue):
     """
