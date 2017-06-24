@@ -1,5 +1,5 @@
 import unittest
-from engine import ReconcileEngine
+from wdreconcile.engine import ReconcileEngine
 from config import redis_client
 
 class ReconcileEngineTest(unittest.TestCase):

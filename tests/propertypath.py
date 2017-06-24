@@ -1,10 +1,12 @@
 
 import unittest
-from propertypath import PropertyFactory
-from propertypath import tokenize_property
 from funcparserlib.lexer import Token
-from wikidatavalue import QuantityValue, ItemValue, IdentifierValue
-from itemstore import ItemStore
+
+from wdreconcile.propertypath import PropertyFactory
+from wdreconcile.propertypath import tokenize_property
+from wdreconcile.wikidatavalue import QuantityValue, ItemValue, IdentifierValue
+from wdreconcile.itemstore import ItemStore
+
 from config import redis_client
 
 class PropertyTest(unittest.TestCase):

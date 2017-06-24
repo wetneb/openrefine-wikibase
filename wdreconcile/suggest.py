@@ -1,18 +1,20 @@
-from itemstore import ItemStore
-from language import language_fallback as lngfb
-from config import preview_height, preview_width, thumbnail_width
-from config import image_properties, this_host
-from config import default_type_entity, property_for_this_type_property
-from utils import to_p
-from propertypath import PropertyFactory
-from sparqlwikidata import sparql_wikidata
-
 import requests
 from bottle import SimpleTemplate
 from bottle import html_escape
 import hashlib
 import re
 from string import Template
+
+from .itemstore import ItemStore
+from .language import language_fallback as lngfb
+from .utils import to_p
+from .propertypath import PropertyFactory
+from .sparqlwikidata import sparql_wikidata
+from .wikidatavalue import ItemValue
+
+from config import preview_height, preview_width, thumbnail_width
+from config import image_properties, this_host
+from config import default_type_entity, property_for_this_type_property
 
 def commons_image_url(filename):
     filename = filename.replace(' ', '_')
@@ -52,15 +54,15 @@ class SuggestEngine(object):
         self.store = ItemStore(self.r)
         self.ft = PropertyFactory(self.store)
         self.store.ttl = 24*60*60 # one day
+        self.image_path = self.ft.parse('|'.join(image_properties))
         with open('templates/preview.html') as f:
             self.preview_template = SimpleTemplate(f.read(), noescape=True)
 
-    def get_image_statements(self, item):
-        for pid in image_properties:
-            for val in item.get(pid, []):
-                yield val
+    def get_image_statements(self, item_value):
+        image_values = self.image_path.step(item_value)
+        return [v.as_string() for v in image_values if not v.is_novalue()]
 
-    def get_image_for_item(self, item, lang):
+    def get_image_for_item(self, item_value, item, lang):
         """
         Returns a Wikimedia Commons file name
         for an image representing this item
@@ -68,7 +70,7 @@ class SuggestEngine(object):
         :returns: a pair of (filename, alt text)
                  or None if we did not find anything
         """
-        images = list(self.get_image_statements(item))
+        images = list(self.get_image_statements(item_value))
         if images:
             return (commons_image_url(images[0]),
                     lngfb(item.get('labels'), lang) or id)
@@ -77,9 +79,10 @@ class SuggestEngine(object):
 
     def preview(self, args):
         id = args['id']
+        item_value = ItemValue(id=id)
         item = self.store.get_item(id)
         lang = args.get('lang')
-        image = self.get_image_for_item(item, lang)
+        image = self.get_image_for_item(item_value, item, lang)
 
         desc = lngfb(item.get('descriptions'), lang)
         if desc:

@@ -1,4 +1,4 @@
-from wikidatavalue import CoordsValue, QuantityValue, UndefinedValue, TimeValue, IdentifierValue
+from .wikidatavalue import CoordsValue, QuantityValue, UndefinedValue, TimeValue, IdentifierValue
 
 
 class SubfieldFactory(object):

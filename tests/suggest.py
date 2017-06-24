@@ -1,6 +1,6 @@
 
 import unittest
-from suggest import SuggestEngine, commons_image_url
+from wdreconcile.suggest import SuggestEngine, commons_image_url
 from config import redis_client
 
 class SuggestEngineTest(unittest.TestCase):
@@ -32,7 +32,7 @@ class SuggestEngineTest(unittest.TestCase):
         kwargs['type'] = resolved_type
         if 'lang' not in kwargs:
             kwargs['lang'] = 'en'
-        return self.s.propose_properties(kwargs)['results']
+        return self.s.propose_properties(kwargs)['properties']
 
     # Tests start here
 
@@ -69,7 +69,7 @@ class SuggestEngineTest(unittest.TestCase):
         # number of students (P2196) is marked on "institutional
         # education", whose "university (Q3918)" is a subclass of.
         self.assertTrue('P2196' in
-            [p['pid'] for p in self.propose('Q3918')])
+            [p['id'] for p in self.propose('Q3918')])
 
         # Check the limits
         self.assertEqual(len(self.propose('Q3918', limit=10)), 10)

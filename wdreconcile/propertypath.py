@@ -9,12 +9,11 @@ from funcparserlib.lexer import LexerError
 import itertools
 from collections import defaultdict
 
-from language import language_fallback
-from utils import to_q
-from utils import to_p
-from sparqlwikidata import sparql_wikidata
-from subfields import subfield_factory
-from wikidatavalue import WikidataValue
+from .utils import to_p
+from .utils import to_q
+from .sparqlwikidata import sparql_wikidata
+from .subfields import subfield_factory
+from .wikidatavalue import WikidataValue
 
 property_lexer_specs = [
     ('DOT', (r'\.',)),
@@ -164,33 +163,38 @@ class PropertyPath(object):
             raise ValueError("get_item expects an ItemValue")
         return self.item_store.get_item(item.id)
 
-    def evaluate(self, item):
+    def evaluate(self, item_value, lang=None, fetch_labels=True):
         """
         Evaluates the property path on the
-        given item, and returns its labels.
+        given item, and returning strings (either qids or labels).
 
         :param lang: the language to use, if any labels are fetched
         :param fetch_labels: should we returns items or labels?
         """
-
         def fetch_label(v):
-            if v.value_type != 'wikibase-item':
-                return [v]
-            item = self.get_item(v)
+            if v.value_type != "wikibase-item":
+                return [v.as_string()]
+            item = self.get_item(v.id)
 
+            if not lang:
+                # return all labels and aliases
+                labels = list(item.get('labels', {}).values())
+                aliases = item.get('aliases', [])
+                return labels+aliases
+            else:
+                labels = item.get('labels', {})
+                return [language_fallback(labels, lang)]
 
-            if not item:
-                return [v] # this is already a value
-
-            labels = list(item.get('labels', {}).values())
-            aliases = item.get('aliases', [])
-            return labels+aliases
-
-        values = self.step(item)
+        values = self.step(item_value)
         if fetch_labels:
             values = itertools.chain(
                 *list(map(fetch_label, values))
             )
+        else:
+            values = [
+                val.json.get('id')
+                for val in values
+            ]
 
         return list(values)
 

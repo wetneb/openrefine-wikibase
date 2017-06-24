@@ -3,7 +3,8 @@ import unittest
 import requests_mock
 import re
 import requests
-from typematcher import TypeMatcher
+
+from wdreconcile.typematcher import TypeMatcher
 from config import redis_client
 
 class TypeMatcherTest(unittest.TestCase):

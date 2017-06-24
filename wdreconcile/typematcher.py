@@ -1,5 +1,5 @@
-from utils import to_q
-from sparqlwikidata import sparql_wikidata
+from .utils import to_q
+from .sparqlwikidata import sparql_wikidata
 
 class TypeMatcher(object):
     """

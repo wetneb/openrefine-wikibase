@@ -5,9 +5,9 @@ import time
 
 from bottle import route, run, request, default_app, template, HTTPError
 from docopt import docopt
-from engine import ReconcileEngine
-from suggest import SuggestEngine
-from monitoring import Monitoring
+from wdreconcile.engine import ReconcileEngine
+from wdreconcile.suggest import SuggestEngine
+from wdreconcile.monitoring import Monitoring
 
 from config import *
 

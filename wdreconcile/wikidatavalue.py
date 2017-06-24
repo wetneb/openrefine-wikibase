@@ -1,5 +1,6 @@
-from utils import to_q, fuzzy_match_strings, match_ints, match_floats
 import dateutil.parser
+
+from .utils import to_q, fuzzy_match_strings, match_ints, match_floats
 
 wdvalue_mapping = {}
 
@@ -43,11 +44,18 @@ class WikidataValue(object):
         """
         typ = wd_repr['datatype']
         val = wd_repr['datavalue']
-        cls = wdvalue_mapping.get(typ, self)
+        cls = wdvalue_mapping.get(typ, UndefinedValue)
         return cls.from_datavalue(val)
 
     def is_novalue(self):
         return self.json == {}
+
+    def as_string():
+        """
+        String representation of the value,
+        for the old API that only returns strings
+        """
+        raise NotImplemented
 
     def __getattr__(self, key):
         """
@@ -116,6 +124,9 @@ class ItemValue(WikidataValue):
         else:
             return max(matching_scores)
 
+    def as_string():
+        return self.json.get('id', '')
+
 @register
 class UrlValue(WikidataValue):
     """
@@ -131,6 +142,9 @@ class UrlValue(WikidataValue):
     def match_with_str(self, s, item_store):
         # TODO more matching modes
         return s == self.value
+
+    def as_string(self):
+        return self.json.get('value', '')
 
 @register
 class CoordsValue(WikidataValue):
@@ -154,6 +168,9 @@ class CoordsValue(WikidataValue):
         # TODO convert that to a ratio based on the precision
         return 0.
 
+    def as_string(self):
+        return str(self.json.get('latitude', ''))+','+str(self.json.get('longitude', ''))
+
 @register
 class IdentifierValue(WikidataValue):
     """
@@ -169,6 +186,9 @@ class IdentifierValue(WikidataValue):
 
     def match_with_str(self, s, item_store):
         return 100 if s.strip() == self.value else 0
+
+    def as_string(self):
+        return self.json.get('value', '')
 
 
 @register
@@ -196,6 +216,9 @@ class QuantityValue(WikidataValue):
             return match_floats(ref, f)
         except ValueError:
             return 0
+
+    def as_string(self):
+        return str(self.json.get('quantity', ''))
 
 @register
 class TimeValue(WikidataValue):
@@ -231,6 +254,27 @@ class TimeValue(WikidataValue):
         # TODO convert to a ratio based on the precision
         return 0
 
+    def as_string(self):
+        return str(self.json.get('time', ''))
+
+@register
+class MediaValue(WikidataValue):
+    """
+    Fields:
+    - value
+    """
+    value_type = "commonsMedia"
+
+    @classmethod
+    def from_datavalue(self, wd_repr):
+        return MediaValue(**wd_repr)
+
+    def match_with_str(self, s, item_store):
+        return 100 if s == self.json.get('value') else 0
+
+    def as_string(self):
+        return self.json.get('value', '')
+
 class UndefinedValue(WikidataValue):
     """
     This is different from "novalue" (which explicitely
@@ -248,3 +292,6 @@ class UndefinedValue(WikidataValue):
 
     def is_novalue(self):
         return False
+
+    def as_string(self):
+        return ""

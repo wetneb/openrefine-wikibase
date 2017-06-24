@@ -1,6 +1,6 @@
 import requests
 import json
-from language import language_fallback
+from .language import language_fallback
 
 class ItemStore(object):
     """

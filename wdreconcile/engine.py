@@ -1,15 +1,16 @@
 from config import *
 import requests
 import itertools
-from itemstore import ItemStore
-from typematcher import TypeMatcher
-from utils import to_q
 import re
 import json
 from collections import defaultdict
-from language import language_fallback
-from propertypath import PropertyFactory
-from wikidatavalue import ItemValue
+
+from .itemstore import ItemStore
+from .typematcher import TypeMatcher
+from .utils import to_q
+from .language import language_fallback
+from .propertypath import PropertyFactory
+from .wikidatavalue import ItemValue
 
 class ReconcileEngine(object):
     """
@@ -296,7 +297,7 @@ class ReconcileEngine(object):
         """
         new_args = args.copy()
         qid = args.get('item', '')
-        new_args['qids'] = qid
+        new_args['ids'] = qid
         results = self.fetch_property_by_batch(new_args)
         values = results['values'][0]
         if args.get('flat') == 'true':
@@ -328,11 +329,9 @@ class ReconcileEngine(object):
         if None in items:
             raise ValueError('Invalid Qid provided')
 
-        print(list(items))
-        print(path)
         values = [
             path.evaluate(
-                qid,
+                ItemValue(id=qid),
                 lang=lang,
                 fetch_labels=fetch_labels,
             ) for qid in items ]
