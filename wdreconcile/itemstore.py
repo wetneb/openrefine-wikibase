@@ -92,7 +92,6 @@ class ItemStore(object):
             'format':'json',
             'props':'aliases|labels|descriptions|claims',
             'ids':'|'.join(first_batch)})
-        print(r.url)
         r.raise_for_status()
         resp = r.json()
 

@@ -1,4 +1,6 @@
 import dateutil.parser
+from urllib.parse import urlparse, urlunparse
+import math
 
 from .utils import to_q, fuzzy_match_strings, match_ints, match_floats
 
@@ -132,16 +134,54 @@ class UrlValue(WikidataValue):
     """
     Fields:
     - value (the URL itself)
+    - parsed (by urllib)
     """
     value_type = "url"
+
+    def __init__(self, **kwargs):
+        super(UrlValue, self).__init__(**kwargs)
+        val = kwargs.get('value')
+        self.parsed = None
+        if val:
+            try:
+                self.parsed = urlparse(val)
+                if not self.parsed.netloc:
+                    self.parsed = None
+                    raise ValueError
+                self.canonical = self.canonicalize(self.parsed)
+            except ValueError:
+                pass
+
+    def canonicalize(self, parsed):
+        """
+        Take a parsed URL and returns its
+        canonicalized form for exact matching
+        """
+        return urlunparse(
+            ('', # no scheme
+             parsed[1],
+             parsed[2],
+             parsed[3],
+             parsed[4],
+             parsed[5]))
 
     @classmethod
     def from_datavalue(self, wd_repr):
         return UrlValue(value=wd_repr('value', {}))
 
     def match_with_str(self, s, item_store):
-        # TODO more matching modes
-        return s == self.value
+        # no value
+        if self.parsed is None:
+            return 0
+
+        # let's see if the candidate value is a URL
+        matched_val = s
+        try:
+            parsed_s = urlparse(s)
+            matched_val = self.canonicalize(parsed_s)
+        except ValueError:
+            pass
+        return 100 if matched_val == self.canonical else 0
 
     def as_string(self):
         return self.json.get('value', '')
@@ -155,6 +195,11 @@ class CoordsValue(WikidataValue):
     - altitude (float)
     - precision (float)
     - globe (string)
+
+    >>> int(CoordsValue(latitude=53.3175,longitude=-4.6204).match_with_str("53.3175,-4.6204", None))
+    100
+    >>> int(CoordsValue(latitude=53.3175,longitude=-4.6204).match_with_str("53.3175,-5.6204", None))
+    0
     """
     value_type = "globe-coordinate"
 
@@ -163,10 +208,25 @@ class CoordsValue(WikidataValue):
         return CoordsValue(**wd_repr.get('value', {}))
 
     def match_with_str(self, s, item_store):
-        # TODO parse the string as coordinates
-        # TODO measure the distance with the target coords
-        # TODO convert that to a ratio based on the precision
-        return 0.
+        # parse the string as coordinates
+        parts = s.split(',')
+        if len(parts) != 2:
+            return 0.
+        try:
+            lat = float(parts[0])
+            lng = float(parts[1])
+        except ValueError:
+            return 0.
+
+        # measure the distance with the target coords
+        # (flat earth approximation)
+        diflat = lat - self.latitude
+        diflng = lng - self.longitude
+        dist = math.sqrt(diflat*diflat + diflng*diflng)
+        dist_in_km = (dist / 180) * math.pi * 6371 # earth radius
+
+        # TODO take the precision into account
+        return 100*max(0, 1 - dist_in_km)
 
     def as_string(self):
         return str(self.json.get('latitude', ''))+','+str(self.json.get('longitude', ''))

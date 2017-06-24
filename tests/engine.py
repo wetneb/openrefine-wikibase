@@ -123,7 +123,6 @@ class ReconcileEngineTest(unittest.TestCase):
         score = self.best_score("Ramsden",
                     typ="Q486972",
                     properties=[{"pid":"P625@lat","v":"51.837"}])
-        print(score)
         self.assertTrue(score
             > 80)
 

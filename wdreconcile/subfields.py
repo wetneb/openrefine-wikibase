@@ -1,4 +1,4 @@
-from .wikidatavalue import CoordsValue, QuantityValue, UndefinedValue, TimeValue, IdentifierValue
+from .wikidatavalue import CoordsValue, QuantityValue, UndefinedValue, TimeValue, IdentifierValue, UrlValue
 
 
 class SubfieldFactory(object):
@@ -188,7 +188,40 @@ class IsoSubfield(Subfield):
     def run(self, val):
         return IdentifierValue(value=val.parsed.isoformat())
 
-import doctest
-def load_tests(loader, tests, ignore):
-    tests.addTests(doctest.DocTestSuite())
-    return tests
+@register('urlscheme')
+class SchemeSubfield(Subfield):
+    """
+    >>> SchemeSubfield()(UrlValue(value="https://www.gnu.org/software/emacs/"))
+    IdentifierValue(value='https')
+    >>> SchemeSubfield()(UrlValue(value="dummy"))
+    UndefinedValue()
+    """
+    def run(self, val):
+        if val.parsed:
+            return IdentifierValue(value=val.parsed.scheme)
+
+@register('netloc')
+class NetlocSubfield(Subfield):
+    """
+    >>> NetlocSubfield()(UrlValue(value="https://www.gnu.org/software/emacs/"))
+    IdentifierValue(value='www.gnu.org')
+    >>> NetlocSubfield()(UrlValue(value="dummy"))
+    UndefinedValue()
+    """
+    def run(self, val):
+        if val.parsed:
+            return IdentifierValue(value=val.parsed.netloc)
+
+@register('netloc')
+class UrlpathSubfield(Subfield):
+    """
+    >>> UrlpathSubfield()(UrlValue(value="https://www.gnu.org/software/emacs/"))
+    IdentifierValue(value='/software/emacs/')
+    >>> UrlpathSubfield()(UrlValue(value="dummy"))
+    UndefinedValue()
+    """
+    def run(self, val):
+        if val.parsed:
+            return IdentifierValue(value=val.parsed.path)
+
+

@@ -313,7 +313,6 @@ class ReconcileEngine(object):
         Endpoint allowing clients to fetch the values associated
         to items and a property path.
         """
-        print(args)
         lang = args.get('lang')
         if not lang:
             raise ValueError('No lang provided')
