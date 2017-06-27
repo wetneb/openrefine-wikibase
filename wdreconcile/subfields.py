@@ -212,7 +212,7 @@ class NetlocSubfield(Subfield):
         if val.parsed:
             return IdentifierValue(value=val.parsed.netloc)
 
-@register('netloc')
+@register('urlpath')
 class UrlpathSubfield(Subfield):
     """
     >>> UrlpathSubfield()(UrlValue(value="https://www.gnu.org/software/emacs/"))
