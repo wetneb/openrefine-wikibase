@@ -19,7 +19,7 @@ def jsonp(view):
     def wrapped(*posargs, **kwargs):
         args = {}
         # if we access the args via get(),
-        # we can get encoding errors…
+        # we can get encoding errors...
         for k in request.forms:
             args[k] = getattr(request.forms, k)
         for k in request.query:
@@ -198,7 +198,7 @@ def fetch_property_by_batch(args, lang):
 @jsonp
 def fetch_property_by_batch(args, lang):
     args['lang'] = lang
-    args['query'] = json.loads(args.get('query', '{}'))
+    args['extend'] = json.loads(args.get('extend', '{}'))
     return reconcile.fetch_properties_by_batch(args)
 
 @route('/')

@@ -341,29 +341,52 @@ class ReconcileEngine(object):
         """
         Endpoint allowing clients to fetch multiple properties
         (or property paths) on multiple items, simultaneously.
+
+        This is complies with OpenRefine's data extension protocol.
         """
         lang = args.get('lang')
         if not lang:
             raise ValueError('No lang provided')
 
-        query = args.get('query', {})
+        query = args.get('extend', {})
 
         # Qids of the items to fetch
         ids = query.get('ids', [])
+        ids = list(map(to_q, ids))
+        if None in ids:
+            raise ValueError('Invalid item id provided')
 
         # Property paths to fetch
-        props = query.get('properties', [])
+        props = query.get('properties')
+        if not props:
+            raise ValueError("At least one property has to be provided")
+
+        paths = {
+            prop: self.prepare_property({'pid':prop})['path']
+            for prop in props
+        }
 
         # TODO: this could be streamlined in just one SPARQL query
-        columns = [
-            self.fetch_property_by_batch(
-                {'lang':lang,
-                 'prop':prop,
-                 'ids':ids})
+        rows = {}
+        for qid in ids:
+            rows[qid] = {
+                prop : [
+                    v.as_openrefine_cell(lang, self.item_store)
+                    for v in path.step(
+                        ItemValue(id=qid))
+                ]
+                for prop, path in paths.items()
+            }
+
+        meta = {
+            prop : {}
             for prop in props
-        ]
+        }
+
         return {
-            'columns': columns
+            'ids': list(ids),
+            'rows': rows,
+            'meta': meta,
         }
 
 

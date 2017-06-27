@@ -28,15 +28,11 @@ class WikidataValue(object):
         about items if needed.
 
         Scores should be returned between 0 and 100
+
+        :param s: the string to match with
+        :param item_store: an ItemStore, to retrieve items if needed
         """
         return 0
-
-    @classmethod
-    def from_json(self, representation):
-        """
-        Creates a WikidataValue from our JSON representation
-        """
-        return wdvalue_mapping[representation['type']](**representation)
 
     @classmethod
     def from_datavalue(self, wd_repr):
@@ -56,6 +52,29 @@ class WikidataValue(object):
         """
         String representation of the value,
         for the old API that only returns strings
+        """
+        raise NotImplemented
+
+    def as_openrefine_cell(self, lang, item_store):
+        """
+        Returns a JSON representation for the
+        OpenRefine extend API.
+
+        Subclasses should reimplement _as_cell instead.
+
+        :param lang: the language in which the cell should be displayed
+        :param item_store: an ItemStore, to retrieve items if needed
+        """
+        if self.is_novalue():
+            return {}
+        return self._as_cell(lang, item_store)
+
+    def _as_cell(self, lang, item_store):
+        """
+        This method can assume that the value is not a novalue
+
+        :param lang: the language in which the cell should be displayed
+        :param item_store: an ItemStore, to retrieve items if needed
         """
         raise NotImplemented
 
@@ -129,6 +148,12 @@ class ItemValue(WikidataValue):
     def as_string():
         return self.json.get('id', '')
 
+    def _as_cell(self, lang, item_store):
+        return {
+            'id': self.id,
+            'label': item_store.get_label(self.id, lang),
+        }
+
 @register
 class UrlValue(WikidataValue):
     """
@@ -186,6 +211,11 @@ class UrlValue(WikidataValue):
     def as_string(self):
         return self.json.get('value', '')
 
+    def _as_cell(self, lang, item_store):
+        return {
+            'str': self.value
+        }
+
 @register
 class CoordsValue(WikidataValue):
     """
@@ -231,6 +261,11 @@ class CoordsValue(WikidataValue):
     def as_string(self):
         return str(self.json.get('latitude', ''))+','+str(self.json.get('longitude', ''))
 
+    def _as_cell(self, lang, item_store):
+        return {
+            'str': self.as_string()
+        }
+
 @register
 class IdentifierValue(WikidataValue):
     """
@@ -249,6 +284,11 @@ class IdentifierValue(WikidataValue):
 
     def as_string(self):
         return self.json.get('value', '')
+
+    def _as_cell(self, lang, item_store):
+        return {
+            'str': self.value
+        }
 
 @register
 class QuantityValue(WikidataValue):
@@ -279,6 +319,11 @@ class QuantityValue(WikidataValue):
     def as_string(self):
         return str(self.json.get('quantity', ''))
 
+    def _as_cell(self, lang, item_store):
+        return {
+            'float': self.quantity,
+        }
+
 @register
 class MonolingualValue(WikidataValue):
     """
@@ -301,6 +346,10 @@ class MonolingualValue(WikidataValue):
     def as_string(self):
         return self.json.get('text') or ''
 
+    def _as_cell(self, lang, item_store):
+        return {
+            'str': self.text
+        }
 
 @register
 class TimeValue(WikidataValue):
@@ -339,6 +388,14 @@ class TimeValue(WikidataValue):
     def as_string(self):
         return str(self.json.get('time', ''))
 
+    def is_novalue(self):
+        return self.parsed is None
+
+    def _as_cell(self, lang, item_store):
+        return {
+            'date': self.parsed.isoformat()
+        }
+
 @register
 class MediaValue(IdentifierValue):
     """
@@ -375,3 +432,6 @@ class UndefinedValue(WikidataValue):
 
     def as_string(self):
         return ""
+
+    def _as_cell(self, lang, item_store):
+        return {}
