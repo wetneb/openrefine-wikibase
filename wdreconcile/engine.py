@@ -111,13 +111,20 @@ class ReconcileEngine(object):
                 qids_to_prefetch |= set(qids[query_id])
                 continue
 
-            # Otherwise, do a string search
+            # Otherwise, use the text query
             if 'query' not in query:
                 raise ValueError('No "query" provided')
             num_results = int(query.get('limit') or default_num_results)
             num_results_before_filter = min([2*num_results, wd_api_max_search_results])
-            qids[query_id] = self.wikidata_string_search(query['query'],
+
+            # If the text query is actually a QID, just return the QID itself
+            query_as_qid = to_q(query['query'])
+            if query_as_qid:
+                qids[query_id] = [query_as_qid]
+            else: # otherwise just search for the string with the WD API
+                qids[query_id] = self.wikidata_string_search(query['query'],
                                     num_results_before_filter)
+
             qids_to_prefetch |= set(qids[query_id])
 
         # Prefetch all items

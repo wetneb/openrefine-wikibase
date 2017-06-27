@@ -55,6 +55,14 @@ class ReconcileEngineTest(unittest.TestCase):
             self.best_match_id('Oxford', typ='Q3957'), # town
             'Q34433')
 
+    def test_qid(self):
+        self.assertEqual(
+            self.best_match_id('Q29568422'),
+            'Q29568422')
+        self.assertEqual(
+            self.best_score('Q29568422'),
+            100)
+
     def test_unique_id(self):
         """
         We can fetch items by unique ids!
