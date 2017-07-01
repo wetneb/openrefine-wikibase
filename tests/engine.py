@@ -1,5 +1,6 @@
 import unittest
 from wdreconcile.engine import ReconcileEngine
+import json
 from config import redis_client
 
 class ReconcileEngineTest(unittest.TestCase):
@@ -15,7 +16,10 @@ class ReconcileEngineTest(unittest.TestCase):
         return self.r.process_single_query(kwargs)
 
     def results(self, *args, **kwargs):
-        return self.query(*args, **kwargs)['result']
+        res = self.query(*args, **kwargs)['result']
+        # try to dump it as JSOn
+        json.dumps(res)
+        return res
 
     def result_ids(self, *args, **kwargs):
         return [r['id'] for r in self.query(*args, **kwargs)['result']]

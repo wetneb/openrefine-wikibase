@@ -225,12 +225,6 @@ class ReconcileEngine(object):
 
                 weight = (1.0 if prop_id == 'all_labels'
                           else self.property_weight)
-                scored[prop_id] = {
-                    'values': values,
-                    'best_value': bestval,
-                    'score': maxscore,
-                    'weighted': weight*maxscore,
-                }
 
             # Compute overall score
             sum_scores = sum([
