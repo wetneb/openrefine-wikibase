@@ -301,13 +301,13 @@ class QuantityValue(WikidataValue):
 
     def __init__(self, **values):
         super(QuantityValue, self).__init__(**values)
-        self.amount = values.get('value', {}).get('amount')
+        self.amount = values.get('amount')
         if self.amount is not None:
             self.amount = float(self.amount)
 
     @classmethod
     def from_datavalue(cls, wd_repr):
-        return cls(**wd_repr)
+        return cls(**wd_repr.get('value', {}))
 
     def match_with_str(self, s, item_store):
         try:

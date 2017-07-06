@@ -74,12 +74,12 @@ class LatSubfield(Subfield):
     Extracts the latitude from coordinate locations
 
     >>> LatSubfield()(CoordsValue(latitude=47.521681,longitude=19.006213))
-    QuantityValue(quantity=47.521681)
+    QuantityValue(amount=47.521681)
     """
     expects_types = ['globe-coordinate']
 
     def run(self, val):
-        return QuantityValue(quantity=val.latitude)
+        return QuantityValue(amount=val.latitude)
 
 @register('lng')
 class LngSubfield(Subfield):
@@ -87,84 +87,84 @@ class LngSubfield(Subfield):
     Extracts the longitude from coordinate locations
 
     >>> LngSubfield()(CoordsValue(latitude=47.521681,longitude=19.006213))
-    QuantityValue(quantity=19.006213)
+    QuantityValue(amount=19.006213)
     """
     expects_types = ['globe-coordinate']
 
     def run(self, val):
-        return QuantityValue(quantity=val.longitude)
+        return QuantityValue(amount=val.longitude)
 
 @register('year')
 class YearSubfield(Subfield):
     """
     >>> YearSubfield()(TimeValue(time="+1096-01-01T00:00:00Z", precision=9))
-    QuantityValue(quantity=1096)
+    QuantityValue(amount=1096)
     >>> YearSubfield()(TimeValue(time="+1096-01-01T00:00:00Z", precision=8))
     UndefinedValue()
     """
     def run(self, val):
         if val.precision >= 9:
-            return QuantityValue(quantity=val.parsed.year)
+            return QuantityValue(amount=val.parsed.year)
 
 @register('month')
 class MonthSubfield(Subfield):
     """
     >>> MonthSubfield()(TimeValue(time="+1896-03-01T00:00:00Z", precision=10))
-    QuantityValue(quantity=3)
+    QuantityValue(amount=3)
     >>> MonthSubfield()(TimeValue(time="+1896-01-01T00:00:00Z", precision=9))
     UndefinedValue()
     """
     def run(self, val):
         if val.precision >= 10:
-            return QuantityValue(quantity=val.parsed.month)
+            return QuantityValue(amount=val.parsed.month)
 
 @register('day')
 class DaySubfield(Subfield):
     """
     >>> DaySubfield()(TimeValue(time="+1996-03-17T00:00:00Z", precision=11))
-    QuantityValue(quantity=17)
+    QuantityValue(amount=17)
     >>> DaySubfield()(TimeValue(time="+1996-03-17T00:00:00Z", precision=10))
     UndefinedValue()
     """
     def run(self, val):
         if val.precision >= 11:
-            return QuantityValue(quantity=val.parsed.day)
+            return QuantityValue(amount=val.parsed.day)
 
 @register('hour')
 class HourSubfield(Subfield):
     """
     >>> HourSubfield()(TimeValue(time="+1996-03-17T04:00:00Z", precision=12))
-    QuantityValue(quantity=4)
+    QuantityValue(amount=4)
     >>> HourSubfield()(TimeValue(time="+1996-03-17T00:00:00Z", precision=11))
     UndefinedValue()
     """
     def run(self, val):
         if val.precision >= 12:
-            return QuantityValue(quantity=val.parsed.hour)
+            return QuantityValue(amount=val.parsed.hour)
 
 @register('minute')
 class MinuteSubfield(Subfield):
     """
     >>> MinuteSubfield()(TimeValue(time="+1996-03-17T04:15:00Z", precision=13))
-    QuantityValue(quantity=15)
+    QuantityValue(amount=15)
     >>> MinuteSubfield()(TimeValue(time="+1996-03-17T04:00:00Z", precision=12))
     UndefinedValue()
     """
     def run(self, val):
         if val.precision >= 13:
-            return QuantityValue(quantity=val.parsed.minute)
+            return QuantityValue(amount=val.parsed.minute)
 
 @register('second')
 class SecondSubfield(Subfield):
     """
     >>> SecondSubfield()(TimeValue(time="+1996-03-17T04:15:08Z", precision=14))
-    QuantityValue(quantity=8)
+    QuantityValue(amount=8)
     >>> SecondSubfield()(TimeValue(time="+1996-03-17T04:15:00Z", precision=13))
     UndefinedValue()
     """
     def run(self, val):
         if val.precision >= 14:
-            return QuantityValue(quantity=val.parsed.second)
+            return QuantityValue(amount=val.parsed.second)
 
 @register('isodate')
 class IsoDateSubfield(Subfield):

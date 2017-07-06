@@ -132,17 +132,17 @@ class PropertyTest(unittest.TestCase):
         self.assertEqual(
             self.resolve('P571@year', # inception year
                         'Q34433'), # oxford
-            [QuantityValue(quantity=1096)])
+            [QuantityValue(amount=1096)])
 
         self.assertEqual(
             self.resolve('P585@month', # point in time year
                         'Q30274958'), # grenfell tower fire
-            [QuantityValue(quantity=6)]) # June
+            [QuantityValue(amount=6)]) # June
 
         self.assertEqual(
             self.resolve('P625@lng', # point in time year
                         'Q179385'), # Greenwich
-            [QuantityValue(quantity=0)]) # Reference!
+            [QuantityValue(amount=0)]) # Reference!
 
     def test_is_unique_identifier(self):
         self.assertTrue(
