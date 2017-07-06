@@ -158,24 +158,6 @@ class PropertyTest(unittest.TestCase):
         self.assertFalse(
             self.f.parse('(P3500|P17)').is_unique_identifier())
 
-    def test_ends_with_identifier(self):
-        self.assertTrue(
-            self.f.parse('P3500').ends_with_identifier())
-        self.assertTrue(
-            self.f.parse('P2427').ends_with_identifier())
-        self.assertTrue(
-            self.f.parse('P749/P2427').ends_with_identifier())
-        self.assertTrue(
-            self.f.parse('P749/(P2427|P3500)').ends_with_identifier())
-        self.assertFalse(
-            self.f.parse('.').ends_with_identifier())
-        self.assertFalse(
-            self.f.parse('P31').ends_with_identifier())
-        self.assertFalse(
-            self.f.parse('P3500/P17').ends_with_identifier())
-        self.assertFalse(
-            self.f.parse('(P3500|P17)').ends_with_identifier())
-
     def fetch_by_values(self, path_string, values, lang='en'):
         path = self.f.parse(path_string)
         return path.fetch_qids_by_values(values, lang)

@@ -237,13 +237,6 @@ class PropertyPath(object):
         """
         raise NotImplemented
 
-    def ends_with_identifier(self):
-        """
-        Does this path only end with identifier properties?
-        These identifiers are not necessarily unique.
-        """
-        raise NotImplemented
-
     def fetch_qids_by_values(self, values, lang):
         """
         Fetches all the Qids and their labels in the selected language,
@@ -312,9 +305,6 @@ class EmptyPropertyPath(PropertyPath):
     def uniform_depth(self):
         return 0
 
-    def ends_with_identifier(self):
-        return False
-
 class LeafProperty(PropertyPath):
     """
     A node for a leaf, just a simple property like "P31"
@@ -337,9 +327,6 @@ class LeafProperty(PropertyPath):
         if not self.factory.is_identifier_pid(self.pid):
             raise ValueError('One property is not an identifier')
         return 1
-
-    def ends_with_identifier(self):
-        return self.factory.is_identifier_pid(self.pid)
 
 class ConcatenatedPropertyPath(PropertyPath):
     """
@@ -365,9 +352,6 @@ class ConcatenatedPropertyPath(PropertyPath):
     def uniform_depth(self):
         return self.a.uniform_depth() + self.b.uniform_depth()
 
-    def ends_with_identifier(self):
-        return self.b.ends_with_identifier()
-
 class DisjunctedPropertyPath(PropertyPath):
     """
     A disjunction of two property paths
@@ -392,10 +376,6 @@ class DisjunctedPropertyPath(PropertyPath):
             raise ValueError('The depth is not uniform.')
         return depth_a
 
-    def ends_with_identifier(self):
-        return (self.a.ends_with_identifier() and
-                self.b.ends_with_identifier())
-
 class SubfieldPropertyPath(PropertyPath):
     """
     A property path that returns a subfield of another property path
@@ -412,7 +392,4 @@ class SubfieldPropertyPath(PropertyPath):
 
     def uniform_depth(self):
         raise ValueError('One property bears a subfield')
-
-    def ends_with_identifier(self):
-        return False
 

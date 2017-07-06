@@ -51,12 +51,6 @@ class ReconcileEngine(object):
         prop['path'] = path
         prop['v'] = str(prop.get('v')).strip()
 
-        # This indicates whether the values returned
-        # by the property path are identifiers. If so,
-        # we should not fuzzy-match them, but only
-        # use equality comparison.
-        prop['ends_with_id'] = path.ends_with_identifier()
-
         # This indicates whether the property is a unique
         # identifier for the resolved items. If so, we can use it
         # to fetch matches, without relying on string search.
@@ -165,7 +159,6 @@ class ReconcileEngine(object):
             'pid':'all_labels',
             'v':query['query'],
             'path':self.pf.make_empty(),
-            'ends_with_id':False,
             'unique_id':False
         }]
 
@@ -206,7 +199,6 @@ class ReconcileEngine(object):
                 prop_id = prop['pid']
                 ref_val = str(prop['v'])
                 path = prop['path']
-                ends_with_id = prop['ends_with_id']
 
                 maxscore = 0
                 bestval = None
