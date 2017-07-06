@@ -69,14 +69,14 @@ class SuggestEngineTest(unittest.TestCase):
         # number of students (P2196) is marked on "institutional
         # education", whose "university (Q3918)" is a subclass of.
         self.assertTrue('P2196' in
-            [p['id'] for p in self.propose('Q3918')])
+            [p['id'] for p in self.propose('Q3918', limit=50)])
 
         # Check the limits
         self.assertEqual(len(self.propose('Q3918', limit=10)), 10)
 
         # Check the language
         self.assertTrue("nombre d'étudiants" in
-            [p['name'] for p in self.propose('Q3918', lang='fr')])
+            [p['name'] for p in self.propose('Q3918', lang='fr', limit=50)])
 
 
 class CommonsImageTest(unittest.TestCase):

@@ -312,10 +312,11 @@ class QuantityValue(WikidataValue):
     def match_with_str(self, s, item_store):
         try:
             f = float(s)
-            ref = float(self.amount)
-            return match_floats(ref, f)
+            if self.amount is not None:
+                return match_floats(self.amount, f)
         except ValueError:
-            return 0
+            pass
+        return 0
 
     def as_string(self):
         return str(self.json.get('amount', ''))
