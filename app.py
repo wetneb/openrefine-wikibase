@@ -53,6 +53,7 @@ def api_custom_lang(args, lang):
 def api(args):
     query = args.get('query')
     queries = args.get('queries')
+    extend = args.get('extend')
     lang = args.get('lang','en')
     start_time = time.time()
 
@@ -71,6 +72,11 @@ def api(args):
         processing_time = time.time() - start_time
         monitoring.log_request(len(queries), processing_time)
         return res
+
+    elif extend:
+        args['extend'] = json.loads(extend)
+        print(args['extend'])
+        return reconcile.fetch_properties_by_batch(args)
 
     else:
         identify = {

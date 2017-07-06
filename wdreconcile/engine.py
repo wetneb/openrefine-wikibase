@@ -366,6 +366,7 @@ class ReconcileEngine(object):
         if not props:
             raise ValueError("At least one property has to be provided")
 
+        props = [prop['id'] for prop in props]
         paths = {
             prop: self.prepare_property({'pid':prop})['path']
             for prop in props
@@ -388,10 +389,11 @@ class ReconcileEngine(object):
             for prop in props
         }
 
-        return {
+        ret = {
             'ids': list(ids),
             'rows': rows,
             'meta': meta,
         }
+        return ret
 
 

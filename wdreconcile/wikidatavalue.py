@@ -151,7 +151,7 @@ class ItemValue(WikidataValue):
     def _as_cell(self, lang, item_store):
         return {
             'id': self.id,
-            'label': item_store.get_label(self.id, lang),
+            'name': item_store.get_label(self.id, lang),
         }
 
 @register
