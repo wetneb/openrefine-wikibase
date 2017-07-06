@@ -13,7 +13,8 @@ from .utils import to_p
 from .utils import to_q
 from .sparqlwikidata import sparql_wikidata
 from .subfields import subfield_factory
-from .wikidatavalue import WikidataValue
+from .wikidatavalue import WikidataValue, ItemValue
+from config import subject_item_of_this_property_pid
 
 property_lexer_specs = [
     ('DOT', (r'\.',)),
@@ -284,6 +285,12 @@ class PropertyPath(object):
 
         return value_to_qid
 
+    def expected_types(self):
+        """
+        Returns a list of possible types expected
+        as values of this property.
+        """
+        raise NotImplemented
 
     def __hash__(self):
         return hash(str(self))
@@ -304,6 +311,9 @@ class EmptyPropertyPath(PropertyPath):
 
     def uniform_depth(self):
         return 0
+
+    def expected_types(self):
+        return []
 
 class LeafProperty(PropertyPath):
     """
@@ -327,6 +337,16 @@ class LeafProperty(PropertyPath):
         if not self.factory.is_identifier_pid(self.pid):
             raise ValueError('One property is not an identifier')
         return 1
+
+    def expected_types(self):
+        """
+        Retrieve the expected type from Wikidata
+        """
+        property_item = self.get_item(ItemValue(id=self.pid))
+        if property_item.get('datatype') != 'wikibase-item':
+            return []
+        vals = property_item.get(subject_item_of_this_property_pid, [])
+        return [WikidataValue.from_datavalue(v).id for v in vals]
 
 class ConcatenatedPropertyPath(PropertyPath):
     """
@@ -352,6 +372,9 @@ class ConcatenatedPropertyPath(PropertyPath):
     def uniform_depth(self):
         return self.a.uniform_depth() + self.b.uniform_depth()
 
+    def expected_types(self):
+        return self.b.expected_types()
+
 class DisjunctedPropertyPath(PropertyPath):
     """
     A disjunction of two property paths
@@ -376,6 +399,9 @@ class DisjunctedPropertyPath(PropertyPath):
             raise ValueError('The depth is not uniform.')
         return depth_a
 
+    def expected_types(self):
+        return (self.a.expected_types() + self.b.expected_types())
+
 class SubfieldPropertyPath(PropertyPath):
     """
     A property path that returns a subfield of another property path
@@ -393,3 +419,5 @@ class SubfieldPropertyPath(PropertyPath):
     def uniform_depth(self):
         raise ValueError('One property bears a subfield')
 
+    def expected_types(self):
+        return []

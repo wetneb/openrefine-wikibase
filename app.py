@@ -114,10 +114,7 @@ def api(args):
                     'service_url' : this_host,
                     'service_path' : '/%s/propose_properties' % lang,
                 },
-                'fetch_column': {
-                    'service_url' : this_host,
-                    'service_path' : '/%s/fetch_properties_by_batch' % lang,
-                },
+                'property_settings': [],
             },
         }
         return identify

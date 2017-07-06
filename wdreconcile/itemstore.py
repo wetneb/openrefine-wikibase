@@ -142,6 +142,9 @@ class ItemStore(object):
                 values.append(dataval)
             simplified[prop_id] = values
 
+        # Add datatype for properties
+        simplified['datatype'] = item.get('datatype')
+
         return simplified
 
 

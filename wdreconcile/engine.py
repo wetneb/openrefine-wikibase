@@ -358,10 +358,10 @@ class ReconcileEngine(object):
         if not props:
             raise ValueError("At least one property has to be provided")
 
-        props = [prop['id'] for prop in props]
+        prop_ids = [prop['id'] for prop in props]
         paths = {
             prop: self.prepare_property({'pid':prop})['path']
-            for prop in props
+            for prop in prop_ids
         }
 
         # TODO: this could be streamlined in just one SPARQL query
@@ -376,10 +376,23 @@ class ReconcileEngine(object):
                 for prop, path in paths.items()
             }
 
-        meta = {
-            prop : {}
-            for prop in props
-        }
+        # Prefetch property names
+        self.item_store.get_items(paths.keys())
+
+        meta = []
+        for pid, path in paths.items():
+            dct = {
+             'id':pid,
+             'name':self.item_store.get_label(pid, lang),
+            }
+            expected_types = path.expected_types()
+            if expected_types:
+                qid = expected_types[0]
+                dct['type'] = {
+                    'id':qid,
+                    'name':self.item_store.get_label(qid, lang),
+                }
+            meta.append(dct)
 
         ret = {
             'ids': list(ids),

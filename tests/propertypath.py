@@ -93,12 +93,16 @@ class PropertyTest(unittest.TestCase):
 
     def value_types(self, path, qid):
         return {v.value_type
-            for v in self.resolve(path, qid)}
+            for v in self.resolve(path, qid) if not v.is_novalue()}
 
     def test_value_types(self):
         self.assertEqual(
             self.value_types('P571', 'Q34433'),
             {'time'})
+
+        self.assertEqual(
+            self.value_types('P2124', 'Q2994760'),
+            {'quantity'})
 
         self.assertEqual(
             self.value_types('P625', 'Q142'),
@@ -184,4 +188,20 @@ class PropertyTest(unittest.TestCase):
         self.assertDictEqual(
             self.fetch_by_values('P213', ['0000 0001 2169 3027'], lang='ko'),
             {'0000 0001 2169 3027':[('Q273600', 'École nationale vétérinaire d’Alfort')]})
+
+    def test_expected_types(self):
+        # Property "country (P17)" has type country (Q6256) at least
+        self.assertTrue(
+            'Q6256' in self.f.parse('P17').expected_types())
+        # GRID identifier has no type
+        self.assertListEqual(
+            self.f.parse('P2427').expected_types(), [])
+        # A property path followed by another
+        self.assertTrue(
+            'Q6256' in self.f.parse('P131/P17').expected_types())
+        # A disjunction
+        self.assertTrue(
+            'Q6256' in self.f.parse('P131|P17').expected_types())
+        self.assertTrue(
+            'Q56061' in self.f.parse('P131|P17').expected_types())
 

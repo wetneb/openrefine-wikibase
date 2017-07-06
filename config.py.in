@@ -63,3 +63,5 @@ default_type_entity = 'Q35120'
 # Property to follow to fetch properties for a given type
 property_for_this_type_property = 'P1963'
 
+# Type expected as target of a given property
+subject_item_of_this_property_pid = 'P1629'
