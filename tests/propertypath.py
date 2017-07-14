@@ -205,3 +205,9 @@ class PropertyTest(unittest.TestCase):
         self.assertTrue(
             'Q56061' in self.f.parse('P131|P17').expected_types())
 
+    def test_readable_name(self):
+        self.assertEqual(
+            'P131/P17', self.f.parse('P131/P17').readable_name('fr'))
+        self.assertEqual(
+            'official website', self.f.parse('P856').readable_name('en'))
+

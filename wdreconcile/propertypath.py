@@ -292,6 +292,13 @@ class PropertyPath(object):
         """
         raise NotImplemented
 
+    def readable_name(self, lang):
+        """
+        Returns a readable name of the property in the given
+        language. By default it is just the string representation.
+        """
+        return self.__str__()
+
     def __hash__(self):
         return hash(str(self))
 
@@ -347,6 +354,9 @@ class LeafProperty(PropertyPath):
             return []
         vals = property_item.get(subject_item_of_this_property_pid, [])
         return [WikidataValue.from_datavalue(v).id for v in vals]
+
+    def readable_name(self, lang):
+        return self.item_store.get_label(self.pid, lang)
 
 class ConcatenatedPropertyPath(PropertyPath):
     """

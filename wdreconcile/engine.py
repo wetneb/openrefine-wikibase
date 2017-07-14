@@ -383,7 +383,7 @@ class ReconcileEngine(object):
         for pid, path in paths.items():
             dct = {
              'id':pid,
-             'name':self.item_store.get_label(pid, lang),
+             'name':path.readable_name(lang),
             }
             expected_types = path.expected_types()
             if expected_types:
