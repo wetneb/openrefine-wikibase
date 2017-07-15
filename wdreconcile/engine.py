@@ -382,7 +382,7 @@ class ReconcileEngine(object):
                     limit = 0
                 if limit > 0:
                     current_row[pid] = current_row[pid][:limit]
-                if prop['settings'].get('count') in [True, 'on', 'checked', 'true']:
+                if prop['settings'].get('count') == 'on':
                     current_row[pid] = [{'float':len(current_row[pid])}]
             rows[qid] = current_row
 
@@ -398,7 +398,7 @@ class ReconcileEngine(object):
              'name':path.readable_name(lang),
             }
             expected_types = path.expected_types()
-            if expected_types:
+            if expected_types and not prop['settings'].get('count') == 'on':
                 qid = expected_types[0]
                 dct['type'] = {
                     'id':qid,
