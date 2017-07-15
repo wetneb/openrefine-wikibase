@@ -114,7 +114,64 @@ def api(args):
                     'service_url' : this_host,
                     'service_path' : '/%s/propose_properties' % lang,
                 },
-                'property_settings': [],
+                'property_settings': [
+                    {
+                        'name': 'limit',
+                        'label': 'Limit',
+                        'help_text': 'Maximum number of values to return per row (0 for no limit)',
+                        'type': 'number',
+                        'default': 0,
+                    },
+                    {
+                        'name': 'rank',
+                        'label': 'Ranks',
+                        'help_text': 'Filter statements by rank',
+                        'type': 'select',
+                        'default': 'any',
+                        'choices': [
+                            {
+                                'value': 'any',
+                                'name': 'Any rank',
+                            },
+                            {
+                                'value': 'best',
+                                'name': 'Only the best rank',
+                            },
+                            {
+                                'value': 'no_deprecated',
+                                'name': 'Preferred and normal ranks',
+                            }
+                        ]
+                    },
+                    {
+                        'name': 'references',
+                        'label': 'References',
+                        'help_text': 'Filter statements by their references',
+                        'type': 'select',
+                        'default' : 'any',
+                        'choices': [
+                            {
+                                'value': 'any',
+                                'name': 'Any statement',
+                            },
+                            {
+                                'value': 'referenced',
+                                'name': 'At least one reference',
+                            },
+                            {
+                                'value': 'no_wiki',
+                                'name': 'At least one non-wiki reference',
+                            }
+                        ]
+                    },
+                    {
+                        'name': 'count',
+                        'label': 'Return counts instead of values',
+                        'help_text': 'The number of values will be returned.',
+                        'type': 'checkbox',
+                        'default': False,
+                    }
+                ]
             },
         }
         return identify

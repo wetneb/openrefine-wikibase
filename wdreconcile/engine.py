@@ -358,29 +358,41 @@ class ReconcileEngine(object):
         if not props:
             raise ValueError("At least one property has to be provided")
 
-        prop_ids = [prop['id'] for prop in props]
         paths = {
-            prop: self.prepare_property({'pid':prop})['path']
-            for prop in prop_ids
+            prop['id']: {
+               'path': self.prepare_property({'pid':prop['id']})['path'],
+               'settings': prop.get('settings', {}),
+            }
+            for prop in props
         }
 
-        # TODO: this could be streamlined in just one SPARQL query
         rows = {}
         for qid in ids:
-            rows[qid] = {
-                prop : [
+            current_row = {}
+            for pid, prop in paths.items():
+                current_row[pid] = [
                     v.as_openrefine_cell(lang, self.item_store)
-                    for v in path.step(
-                        ItemValue(id=qid))
+                    for v in prop['path'].step(
+                        ItemValue(id=qid),
+                        prop['settings'].get('references') or 'all')
                 ]
-                for prop, path in paths.items()
-            }
+                try:
+                    limit = int(prop['settings'].get('limit') or 0)
+                except ValueError:
+                    limit = 0
+                if limit > 0:
+                    current_row[pid] = current_row[pid][:limit]
+                if prop['settings'].get('count') in [True, 'on', 'checked', 'true']:
+                    current_row[pid] = [{'float':len(current_row[pid])}]
+            rows[qid] = current_row
+
 
         # Prefetch property names
         self.item_store.get_items(paths.keys())
 
         meta = []
-        for pid, path in paths.items():
+        for pid, prop in paths.items():
+            path = prop['path']
             dct = {
              'id':pid,
              'name':path.readable_name(lang),

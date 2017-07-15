@@ -200,7 +200,7 @@ class PropertyPath(object):
         return list(values)
 
 
-    def step(self, v):
+    def step(self, v, references='all'):
         """
         Evaluates the property path on the
         given value (most likely an item).
@@ -208,6 +208,11 @@ class PropertyPath(object):
 
         This is the method that should be
         reimplemented by subclasses.
+
+        :param references: either 'all', 'referenced' or 'nonwiki'
+            to filter which statements should be considered (all statements,
+            only the ones with references, or only the ones with references
+            to sources outside wikis)
         """
         raise NotImplemented
 
@@ -310,7 +315,7 @@ class EmptyPropertyPath(PropertyPath):
     An empty path
     """
 
-    def step(self, v):
+    def step(self, v, references='all'):
         return [v]
 
     def __str__(self, add_prefix=False):
@@ -330,7 +335,7 @@ class LeafProperty(PropertyPath):
         super(LeafProperty, self).__init__(factory)
         self.pid = pid
 
-    def step(self, v):
+    def step(self, v, references='all'):
         if v.value_type != 'wikibase-item':
             return []
         item = self.get_item(v)
@@ -368,10 +373,10 @@ class ConcatenatedPropertyPath(PropertyPath):
         self.a = a
         self.b = b
 
-    def step(self, v):
-        intermediate_values = self.a.step(v)
+    def step(self, v, references='all'):
+        intermediate_values = self.a.step(v, references)
         final_values = [
-            self.b.step(v2)
+            self.b.step(v2, references)
             for v2 in intermediate_values
         ]
         return itertools.chain(*final_values)
@@ -394,9 +399,9 @@ class DisjunctedPropertyPath(PropertyPath):
         self.a = a
         self.b = b
 
-    def step(self, v):
-        va = self.a.step(v)
-        vb = self.b.step(v)
+    def step(self, v, references='all'):
+        va = self.a.step(v, references)
+        vb = self.b.step(v, references)
         return itertools.chain(*[va,vb])
 
     def __str__(self, add_prefix=False):
@@ -421,7 +426,7 @@ class SubfieldPropertyPath(PropertyPath):
         self.path = path
         self.subfield = subfield
 
-    def step(self, v):
+    def step(self, v, references='all'):
         orig_values = list(self.path.step(v))
         images_values = list(map(lambda val: subfield_factory.run(self.subfield, val), orig_values))
         return (val for val in images_values if val is not None)
