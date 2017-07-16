@@ -395,7 +395,7 @@ class ReconcileEngine(object):
         for prop in props:
             pid = prop['id']
             path = paths[pid]['path']
-            settings = paths[pid]['settings']
+            settings = paths[pid].get('settings') or {}
             dct = {
              'id':pid,
              'name':path.readable_name(lang),
@@ -403,7 +403,7 @@ class ReconcileEngine(object):
             if settings:
                 dct['settings'] = settings
             expected_types = path.expected_types()
-            if expected_types and not prop['settings'].get('count') == 'on':
+            if expected_types and not settings.get('count') == 'on':
                 qid = expected_types[0]
                 dct['type'] = {
                     'id':qid,
