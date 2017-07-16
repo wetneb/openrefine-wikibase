@@ -151,3 +151,29 @@ class ReconcileEngineTest(unittest.TestCase):
         self.assertEqual(
             self.r.fetch_values({'item':'Q881333','prop':'P213', 'lang':'de', 'flat':'true'}),
             '0000 0004 0547 722X')
+
+    def test_fetch_properties_by_batch(self):
+        # First, a simple test (two items, two properties)
+        self.assertDictEqual(
+            self.r.fetch_properties_by_batch({"lang":"en","extend":{"ids":["Q34433","Q83259"],
+                                "properties":[{"id":"P2427"},{"id":"P17/P297"}]}}),
+            {"rows": {"Q34433": {"P17/P297": [{"str": "GB"}], "P2427": [{"str": "grid.4991.5"}]},
+                "Q83259": {"P17/P297": [{"str": "FR"}], "P2427": [{"str": "grid.5607.4"}]}},
+             "meta": [{"name": "GRID ID", "id": "P2427"}, {"name": "P17/P297", "id": "P17/P297"}]})
+
+        # Second, a test with counts
+        # (number of children of Michael Jackson)
+        self.assertDictEqual(
+            self.r.fetch_properties_by_batch({"lang":"en","extend":{"ids":["Q2831"],
+                                "properties":[{"id":"P40","settings":{"count":"on"}}]}}),
+            {"rows": {"Q2831": {"P40": [{"float": 3}]}},
+             "meta": [{"name": "child", "id": "P40", "settings" : {"count": "on"}}]})
+
+        # Second, a test with counts and best ranks
+        # (number of current currencies in France)
+        self.assertDictEqual(
+            self.r.fetch_properties_by_batch({"lang":"en","extend":{"ids":["Q142"],
+                                "properties":[{"id":"P38","settings":{"rank":"best","count":"on"}}]}}),
+            {"rows": {"Q142": {"P38": [{"float": 1}]}},
+             "meta": [{"name": "currency", "id": "P38", "settings" : {"count": "on","rank":"best"}}]})
+

@@ -30,7 +30,7 @@ class ItemStoreTest(unittest.TestCase):
         that have been in use before, and Australian Dollar
         is the preferred one.
         """
-        self.assertEqual(self.s.get_item('Q408')['P38'][0]['datavalue']['value']['id'],
+        self.assertEqual(self.s.get_item('Q408')['P38'][0]['mainsnak']['datavalue']['value']['id'],
                         'Q259502')
 
     def test_caching(self):

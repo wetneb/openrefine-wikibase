@@ -374,7 +374,8 @@ class ReconcileEngine(object):
                     v.as_openrefine_cell(lang, self.item_store)
                     for v in prop['path'].step(
                         ItemValue(id=qid),
-                        prop['settings'].get('references') or 'all')
+                        prop['settings'].get('references') or 'any',
+                        prop['settings'].get('rank') or 'any')
                 ]
                 try:
                     limit = int(prop['settings'].get('limit') or 0)
@@ -391,12 +392,16 @@ class ReconcileEngine(object):
         self.item_store.get_items(paths.keys())
 
         meta = []
-        for pid, prop in paths.items():
-            path = prop['path']
+        for prop in props:
+            pid = prop['id']
+            path = paths[pid]['path']
+            settings = paths[pid]['settings']
             dct = {
              'id':pid,
              'name':path.readable_name(lang),
             }
+            if settings:
+                dct['settings'] = settings
             expected_types = path.expected_types()
             if expected_types and not prop['settings'].get('count') == 'on':
                 qid = expected_types[0]
@@ -407,7 +412,6 @@ class ReconcileEngine(object):
             meta.append(dct)
 
         ret = {
-            'ids': list(ids),
             'rows': rows,
             'meta': meta,
         }

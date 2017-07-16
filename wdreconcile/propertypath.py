@@ -200,7 +200,7 @@ class PropertyPath(object):
         return list(values)
 
 
-    def step(self, v, references='all'):
+    def step(self, v, referenced='any', rank='any'):
         """
         Evaluates the property path on the
         given value (most likely an item).
@@ -209,7 +209,7 @@ class PropertyPath(object):
         This is the method that should be
         reimplemented by subclasses.
 
-        :param references: either 'all', 'referenced' or 'nonwiki'
+        :param references: either 'any', 'referenced' or 'nonwiki'
             to filter which statements should be considered (all statements,
             only the ones with references, or only the ones with references
             to sources outside wikis)
@@ -315,7 +315,7 @@ class EmptyPropertyPath(PropertyPath):
     An empty path
     """
 
-    def step(self, v, references='all'):
+    def step(self, v, referenced='any', rank='any'):
         return [v]
 
     def __str__(self, add_prefix=False):
@@ -335,11 +335,27 @@ class LeafProperty(PropertyPath):
         super(LeafProperty, self).__init__(factory)
         self.pid = pid
 
-    def step(self, v, references='all'):
+    def step(self, v, referenced='any', rank='any'):
         if v.value_type != 'wikibase-item':
             return []
         item = self.get_item(v)
-        return map(WikidataValue.from_datavalue, item.get(self.pid, []))
+        datavalues = []
+        claims = item.get(self.pid, [])
+
+        if rank == 'best':
+            ranks = [claim['rank'] for claim in claims]
+            best_rank = max(ranks) if ranks else 'deprecated'
+            rank = best_rank
+
+        for claim in claims:
+            if claim['rank'] < rank:
+                continue
+            references = claim.get('references', [])
+            if referenced == 'internal' and not references:
+                continue
+            # TODO handle nowiki case
+            v = WikidataValue.from_datavalue(claim.get('mainsnak', {}))
+            yield v
 
     def __str__(self, add_prefix=False):
         prefix = 'wdt:' if add_prefix else ''
@@ -358,7 +374,7 @@ class LeafProperty(PropertyPath):
         if property_item.get('datatype') != 'wikibase-item':
             return []
         vals = property_item.get(subject_item_of_this_property_pid, [])
-        return [WikidataValue.from_datavalue(v).id for v in vals]
+        return [WikidataValue.from_datavalue(v['mainsnak']).id for v in vals]
 
     def readable_name(self, lang):
         return self.item_store.get_label(self.pid, lang)
@@ -373,10 +389,10 @@ class ConcatenatedPropertyPath(PropertyPath):
         self.a = a
         self.b = b
 
-    def step(self, v, references='all'):
-        intermediate_values = self.a.step(v, references)
+    def step(self, v, referenced='any', rank='any'):
+        intermediate_values = self.a.step(v, referenced, rank)
         final_values = [
-            self.b.step(v2, references)
+            self.b.step(v2, referenced, rank)
             for v2 in intermediate_values
         ]
         return itertools.chain(*final_values)
@@ -399,9 +415,9 @@ class DisjunctedPropertyPath(PropertyPath):
         self.a = a
         self.b = b
 
-    def step(self, v, references='all'):
-        va = self.a.step(v, references)
-        vb = self.b.step(v, references)
+    def step(self, v, referenced='any', rank='any'):
+        va = self.a.step(v, referenced, rank)
+        vb = self.b.step(v, referenced, rank)
         return itertools.chain(*[va,vb])
 
     def __str__(self, add_prefix=False):
@@ -426,8 +442,8 @@ class SubfieldPropertyPath(PropertyPath):
         self.path = path
         self.subfield = subfield
 
-    def step(self, v, references='all'):
-        orig_values = list(self.path.step(v))
+    def step(self, v, referenced='any', rank='any'):
+        orig_values = list(self.path.step(v, referenced, rank))
         images_values = list(map(lambda val: subfield_factory.run(self.subfield, val), orig_values))
         return (val for val in images_values if val is not None)
 

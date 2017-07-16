@@ -132,15 +132,12 @@ class ItemStore(object):
 
         # Add other properties
         for prop_id, claims in item.get('claims', {}).items():
-            values = []
             # Get the preferred statement first
             ordered_claims = sorted(claims,
-                key=lambda c: 0 if c.get('rank') == 'preferred' else 1)
-
-            for claim in ordered_claims:
-                dataval = claim.get('mainsnak', {})
-                values.append(dataval)
-            simplified[prop_id] = values
+                key=lambda c: c.get('rank'), reverse=True)
+            # (ranks are strings but they happen to be lexicographically ordered
+            # in the order of precedence!! prefered > normal > deprecated)
+            simplified[prop_id] = ordered_claims
 
         # Add datatype for properties
         simplified['datatype'] = item.get('datatype')
