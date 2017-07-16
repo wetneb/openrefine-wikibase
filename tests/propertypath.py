@@ -4,7 +4,7 @@ from funcparserlib.lexer import Token
 
 from wdreconcile.propertypath import PropertyFactory
 from wdreconcile.propertypath import tokenize_property
-from wdreconcile.wikidatavalue import QuantityValue, ItemValue, IdentifierValue
+from wdreconcile.wikidatavalue import QuantityValue, ItemValue, IdentifierValue, StringValue
 from wdreconcile.itemstore import ItemStore
 
 from config import redis_client
@@ -61,6 +61,10 @@ class PropertyTest(unittest.TestCase):
         self.assertEqual(
             self.resolve('P17/P297', 'Q83259'),
             [IdentifierValue(value='FR')])
+
+        self.assertEqual(
+            self.resolve('P246', 'Q743'),
+            [StringValue(value='W')])
 
         self.assertEqual(
             self.resolve('P17', 'Q83259'),

@@ -274,12 +274,12 @@ class CoordsValue(WikidataValue):
         }
 
 @register
-class IdentifierValue(WikidataValue):
+class StringValue(WikidataValue):
     """
     Fields:
     - value (string)
     """
-    value_type = "external-id"
+    value_type = "string"
 
     @classmethod
     def from_datavalue(cls, wd_repr):
@@ -287,7 +287,10 @@ class IdentifierValue(WikidataValue):
                 value=wd_repr.get('value', {}))
 
     def match_with_str(self, s, item_store):
-        return 100 if s.strip() == self.value else 0
+        ref_val = self.json.get('value')
+        if not ref_val:
+            return 0
+        return fuzzy_match_strings(ref_val, s)
 
     def as_string(self):
         return self.json.get('value', '')
@@ -296,6 +299,18 @@ class IdentifierValue(WikidataValue):
         return {
             'str': self.value
         }
+
+
+@register
+class IdentifierValue(StringValue):
+    """
+    Fields:
+    - value (string)
+    """
+    value_type = "external-id"
+
+    def match_with_str(self, s, item_store):
+        return 100 if s.strip() == self.value else 0
 
 @register
 class QuantityValue(WikidataValue):
@@ -435,6 +450,10 @@ class UndefinedValue(WikidataValue):
     a claim at all).
     """
     value_type = "undefined"
+
+    @classmethod
+    def from_datavalue(cls, wd_repr):
+        return cls()
 
     def match_with_str(self, s, item_store):
         return 0
