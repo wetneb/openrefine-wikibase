@@ -3,7 +3,7 @@ import bottle
 import json
 import time
 
-from bottle import route, run, request, default_app, template, HTTPError
+from bottle import route, run, request, default_app, template, HTTPError, abort
 from docopt import docopt
 from wdreconcile.engine import ReconcileEngine
 from wdreconcile.suggest import SuggestEngine
@@ -25,16 +25,24 @@ def jsonp(view):
         for k in request.query:
             args[k] = getattr(request.query, k)
         callback = args.get('callback')
+        status_code = 200
         try:
-            result =  view(args, *posargs, **kwargs)
+            result = view(args, *posargs, **kwargs)
         except (KeyError) as e:#ValueError, AttributeError, KeyError) as e:
+            import traceback, sys
+            traceback.print_exc(file=sys.stdout)
             result = {'status':'error',
                     'message':'invalid query',
                     'details': str(e)}
+            status_code = 403
         if callback:
-            return '%s(%s);' % (callback, json.dumps(result))
-        else:
+            result = '%s(%s);' % (callback, json.dumps(result))
+
+        if status_code == 200:
             return result
+        else:
+            abort(status_code, result)
+
     return wrapped
 
 @route('/api', method=['GET','POST'])
@@ -75,7 +83,6 @@ def api(args):
 
     elif extend:
         args['extend'] = json.loads(extend)
-        print(args['extend'])
         return reconcile.fetch_properties_by_batch(args)
 
     else:

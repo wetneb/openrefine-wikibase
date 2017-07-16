@@ -10,6 +10,8 @@ def register(cls):
     wdvalue_mapping[cls.value_type] = cls
     return cls
 
+# TODO treat somevalue and novalue differently
+
 class WikidataValue(object):
     """
     This class represents any target value of a Wikidata claim.
@@ -39,9 +41,14 @@ class WikidataValue(object):
         """
         Creates a WikidataValue from the JSON representation
         of a Wikibase datavalue.
+
+        For now, somevalues are treated just like novalues:
+
+        >>> WikidataValue.from_datavalue({'snaktype': 'somevalue', 'datatype': 'wikibase-item', 'property': 'P61'}).is_novalue()
+        True
         """
         typ = wd_repr['datatype']
-        val = wd_repr['datavalue']
+        val = wd_repr.get('datavalue', {}) # not provided for somevalue
         cls = wdvalue_mapping.get(typ, UndefinedValue)
         return cls.from_datavalue(val)
 

@@ -354,7 +354,12 @@ class LeafProperty(PropertyPath):
             if referenced == 'internal' and not references:
                 continue
             # TODO handle nowiki case
-            v = WikidataValue.from_datavalue(claim.get('mainsnak', {}))
+            mainsnak = claim.get('mainsnak')
+            if not mainsnak:
+                print('no mainsnak')
+                print(claim)
+                continue
+            v = WikidataValue.from_datavalue(mainsnak)
             yield v
 
     def __str__(self, add_prefix=False):
