@@ -37,6 +37,26 @@ class ReconcileEngineTest(unittest.TestCase):
             self.best_match_id('Recumbent bicycle'),
             'Q750483')
 
+    def test_wikidata_search_sucks(self):
+        """
+        The default search interface of Wikidata sucks, mainly
+        because it fails to rank correctly results by relevance.
+        For instance, searching for "United States" does not return
+        "United States of America" (Q30) in the first page of results:
+
+        https://www.wikidata.org/w/index.php?search=&search=United+States&title=Special:Search&go=Go
+
+        Therefore we ensure we fall back on autocompletion. Unfortunately
+        autocompletion has other pitfalls:
+        - a language has to be provided (only labels and aliases from that
+          language will be considered)
+        - it is less robust to variations. For instance, adding a few words
+          in addition to an exact label match will not return anything.
+        """
+        self.assertEqual(
+            self.best_match_id('United States', typ='Q6256'),
+            'Q30')
+
     def test_empty(self):
         self.assertEqual(
             self.results(''),

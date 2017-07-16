@@ -26,7 +26,7 @@ class ReconcileEngine(object):
         self.avoid_type = 'Q17442446' # Wikimedia internal stuff
         self.p31_property_path = self.pf.parse('P31')
 
-    def wikidata_string_search(self, query_string, num_results):
+    def wikidata_string_search(self, query_string, num_results, default_language):
         """
         Use the Wikidata API to search for matching items
         """
@@ -40,7 +40,19 @@ class ReconcileEngine(object):
             'srsearch':query_string},
             headers=headers)
         resp = r.json()
-        return [item['title'] for item in resp.get('query', {}).get('search', [])]
+        search_results = [item['title'] for item in resp.get('query', {}).get('search', [])]
+        r = requests.get(
+            'https://www.wikidata.org/w/api.php',
+            {'action':'wbsearchentities',
+            'format':'json',
+            'language': default_language,
+            'limit':num_results,
+            'search':query_string},
+            headers=headers)
+        resp = r.json()
+        autocomplete_results = [item['id'] for item in resp.get('search', [])]
+
+        return search_results + autocomplete_results
 
     def prepare_property(self, prop):
         """
@@ -117,7 +129,7 @@ class ReconcileEngine(object):
                 qids[query_id] = [query_as_qid]
             else: # otherwise just search for the string with the WD API
                 qids[query_id] = self.wikidata_string_search(query['query'],
-                                    num_results_before_filter)
+                                    num_results_before_filter, default_language)
 
             qids_to_prefetch |= set(qids[query_id])
 
