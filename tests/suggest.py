@@ -70,9 +70,7 @@ class SuggestEngineTest(unittest.TestCase):
         # education", whose "university (Q3918)" is a subclass of.
         print(self.propose('Q3918', limit=50))
         self.assertTrue('P2196' in
-            [p['id'] for p in self.propose('Q3918', limit=100)])
-        # TODO reuse the ordered version of the query (with GAS) so that
-        # this limit can be lowered
+            [p['id'] for p in self.propose('Q3918', limit=20)])
 
         # Check the limits
         self.assertEqual(len(self.propose('Q3918', limit=10)), 10)

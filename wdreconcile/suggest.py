@@ -174,18 +174,25 @@ class SuggestEngine(object):
         # be able to order by depth, so that the most relevant properties
         # come first.
 
-        # TODO reuse the ordered version of the query (with GAS) so that
-        # this limit can be lowered
-
         property_for_this_type_property
         sparql_query = Template("""
         PREFIX wd: <http://www.wikidata.org/entity/>
         PREFIX wdt: <http://www.wikidata.org/prop/direct/>
         PREFIX gas: <http://www.bigdata.com/rdf/gas#>
-        SELECT ?prop ?propLabel WHERE {
-            wd:$base_type wdt:P279*/wdt:$property_for_this_type ?prop
-            SERVICE wikibase:label { bd:serviceParam wikibase:language "$lang" }
+        SELECT ?prop ?propLabel ?depth WHERE {
+        SERVICE gas:service {
+            gas:program gas:gasClass "com.bigdata.rdf.graph.analytics.BFS" .
+            gas:program gas:in wd:$base_type .
+            gas:program gas:out ?out .
+            gas:program gas:out1 ?depth .
+            gas:program gas:maxIterations 10 .
+            gas:program gas:maxVisited 100 .
+            gas:program gas:linkType wdt:P279 .
         }
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "$lang" }
+        ?out wdt:$property_for_this_type ?prop .
+        }
+        ORDER BY ?depth
         LIMIT $limit
         """)
         sparql_query = sparql_query.substitute(
