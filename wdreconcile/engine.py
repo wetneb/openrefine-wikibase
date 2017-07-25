@@ -387,7 +387,7 @@ class ReconcileEngine(object):
                     for v in prop['path'].step(
                         ItemValue(id=qid),
                         prop['settings'].get('references') or 'any',
-                        prop['settings'].get('rank') or 'any')
+                        prop['settings'].get('rank') or 'best')
                 ]
                 try:
                     limit = int(prop['settings'].get('limit') or 0)

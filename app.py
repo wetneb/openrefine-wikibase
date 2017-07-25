@@ -134,7 +134,7 @@ def api(args):
                         'label': 'Ranks',
                         'help_text': 'Filter statements by rank',
                         'type': 'select',
-                        'default': 'any',
+                        'default': 'best',
                         'choices': [
                             {
                                 'value': 'any',

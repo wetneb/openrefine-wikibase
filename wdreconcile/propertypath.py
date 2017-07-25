@@ -201,7 +201,7 @@ class PropertyPath(object):
         return list(values)
 
 
-    def step(self, v, referenced='any', rank='any'):
+    def step(self, v, referenced='any', rank='best'):
         """
         Evaluates the property path on the
         given value (most likely an item).
@@ -214,6 +214,8 @@ class PropertyPath(object):
             to filter which statements should be considered (all statements,
             only the ones with references, or only the ones with references
             to sources outside wikis)
+        :param rank: the ranks of the statements to consider: 'any', 'best',
+           or 'no_deprecated'
         """
         raise NotImplemented
 
