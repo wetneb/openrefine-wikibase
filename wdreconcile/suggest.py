@@ -174,6 +174,9 @@ class SuggestEngine(object):
         # be able to order by depth, so that the most relevant properties
         # come first.
 
+        # TODO reuse the ordered version of the query (with GAS) so that
+        # this limit can be lowered
+
         property_for_this_type_property
         sparql_query = Template("""
         PREFIX wd: <http://www.wikidata.org/entity/>
