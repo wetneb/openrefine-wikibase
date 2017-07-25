@@ -68,7 +68,6 @@ class SuggestEngineTest(unittest.TestCase):
         # We follow wdt:P279 to find properties higher up:
         # number of students (P2196) is marked on "institutional
         # education", whose "university (Q3918)" is a subclass of.
-        print(self.propose('Q3918', limit=50))
         self.assertTrue('P2196' in
             [p['id'] for p in self.propose('Q3918', limit=20)])
 
