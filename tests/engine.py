@@ -171,6 +171,11 @@ class ReconcileEngineTest(unittest.TestCase):
         self.assertEqual(
             self.r.fetch_values({'item':'Q881333','prop':'P213', 'lang':'de', 'flat':'true'}),
             '0000 0004 0547 722X')
+        self.assertEqual(
+            self.fetch_values({'item':'Q3068626','prop':'P463','label':'true'}),
+            {'prop':'P463',
+             'values': ['Académie lorraine des sciences'],
+             'item':'Q3068626'})
 
     def test_fetch_properties_by_batch(self):
         # First, a simple test (two items, two properties)

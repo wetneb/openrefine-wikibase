@@ -15,6 +15,7 @@ from .sparqlwikidata import sparql_wikidata
 from .subfields import subfield_factory
 from .wikidatavalue import WikidataValue, ItemValue
 from config import subject_item_of_this_property_pid
+from .language import language_fallback
 
 property_lexer_specs = [
     ('DOT', (r'\.',)),
@@ -175,7 +176,7 @@ class PropertyPath(object):
         def fetch_label(v):
             if v.value_type != "wikibase-item":
                 return [v.as_string()]
-            item = self.get_item(v.id)
+            item = self.get_item(v)
 
             if not lang:
                 # return all labels and aliases
