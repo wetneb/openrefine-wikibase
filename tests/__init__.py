@@ -1,3 +1,7 @@
+import requests_cache
+
+requests_cache.install_cache('tests/requests_cache')
+
 from .typematcher import *
 from .itemstore import *
 from .engine import *
