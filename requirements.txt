@@ -4,8 +4,8 @@ bottle
 fuzzywuzzy
 python-Levenshtein
 redis
-SPARQLWrapper
 requests_mock # for testing
 unidecode
 funcparserlib
 python_dateutil
+requests_cache
