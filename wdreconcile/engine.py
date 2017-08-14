@@ -11,6 +11,7 @@ from .utils import to_q
 from .language import language_fallback
 from .propertypath import PropertyFactory
 from .wikidatavalue import ItemValue
+from .sitelink import SitelinkFetcher
 
 class ReconcileEngine(object):
     """
@@ -97,6 +98,10 @@ class ReconcileEngine(object):
             for path, values in unique_id_values.items()
         }
 
+        # Resolve all sitelinks to qids
+        sitelinks_to_qids = SitelinkFetcher.sitelinks_to_qids(
+            query['query'] for query in queries.values())
+
         # Fetch all candidate qids for each query
         qids = {}
         qids_to_prefetch = set()
@@ -125,8 +130,14 @@ class ReconcileEngine(object):
 
             # If the text query is actually a QID, just return the QID itself
             query_as_qid = to_q(query['query'])
+            query_as_sitelink = SitelinkFetcher.normalize(query['query'])
+            qid_from_sitelink = None
+            if query_as_sitelink:
+                qid_from_sitelink = sitelinks_to_qids.get(query_as_sitelink)
             if query_as_qid:
                 qids[query_id] = [query_as_qid]
+            elif qid_from_sitelink:
+                qids[query_id] = [qid_from_sitelink]
             else: # otherwise just search for the string with the WD API
                 qids[query_id] = self.wikidata_string_search(query['query'],
                                     num_results_before_filter, default_language)
