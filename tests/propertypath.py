@@ -184,9 +184,9 @@ class PropertyTest(unittest.TestCase):
 
         # Two different properties
         self.assertDictEqual(
-            self.fetch_by_values('(P214|P3500)', ['142129514','1990']),
+            self.fetch_by_values('(P214|P3500)', ['142129514','2167']),
             {'142129514':[('Q34433', 'University of Oxford')],
-             '1990':[('Q49108', 'Massachusetts Institute of Technology')]})
+             '2167':[('Q49108', 'Massachusetts Institute of Technology')]})
 
         # No label defined
         self.assertDictEqual(
