@@ -2,6 +2,7 @@ import dateutil.parser
 from urllib.parse import urlparse, urlunparse
 import math
 
+from .sitelink import SitelinkFetcher
 from .utils import to_q, fuzzy_match_strings, match_ints, match_floats
 
 wdvalue_mapping = {}
@@ -133,6 +134,12 @@ class ItemValue(WikidataValue):
         qid = to_q(s)
         if qid:
             return 100 if qid == self.id else 0
+        # Then check for a sitelink
+        sitelink = SitelinkFetcher.normalize(s)
+        if sitelink:
+            target_qid = item_store.sitelink_fetcher.sitelinks_to_qids(
+                [sitelink]).get(sitelink)
+            return 100 if target_qid == self.id else 0
 
         # Then check for a novalue match
         if not s and self.is_novalue():

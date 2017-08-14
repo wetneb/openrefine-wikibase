@@ -87,6 +87,20 @@ class ReconcileEngineTest(unittest.TestCase):
             self.best_score('Q29568422'),
             100)
 
+    def test_sitelink(self):
+        self.assertEqual(
+            self.best_match_id('https://de.wikipedia.org/wiki/Chelsea Manning'),
+            'Q298423')
+        self.assertEqual(
+            self.best_score('https://de.wikipedia.org/wiki/Chelsea Manning'),
+            100)
+        self.assertTrue(
+            self.best_score('Oxford', properties=[{'pid':'P17', 'v':'https://en.wikipedia.org/wiki/Cambridge'}])
+            < 90)
+        self.assertEqual(
+            self.best_score('Oxford', properties=[{'pid':'P17', 'v':'https://en.wikipedia.org/wiki/United Kingdom'}]),
+            100)
+
     def test_unique_id(self):
         """
         We can fetch items by unique ids!
