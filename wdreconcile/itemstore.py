@@ -1,6 +1,7 @@
 import requests
 import json
 from .language import language_fallback
+from .sitelink import SitelinkFetcher
 
 class ItemStore(object):
     """
@@ -12,6 +13,7 @@ class ItemStore(object):
         self.prefix = 'openrefine_wikidata:items'
         self.ttl = 60*60 # one hour
         self.max_items_per_fetch = 50 # constraint from the Wikidata API
+        self.sitelink_fetcher = SitelinkFetcher(redis_client)
 
     def get_item(self, qid, force=False):
         """

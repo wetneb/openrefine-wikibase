@@ -21,6 +21,7 @@ class ReconcileEngine(object):
         self.item_store = ItemStore(redis_client)
         self.type_matcher = TypeMatcher(redis_client)
         self.pf = PropertyFactory(self.item_store)
+        self.sitelink_fetcher = self.item_store.sitelink_fetcher
         self.property_weight = 0.4
         self.validation_threshold_discount_per_property = 5
         self.match_score_gap = 10
@@ -99,8 +100,12 @@ class ReconcileEngine(object):
         }
 
         # Resolve all sitelinks to qids
-        sitelinks_to_qids = SitelinkFetcher.sitelinks_to_qids(
-            query['query'] for query in queries.values())
+        possible_sitelinks = [query['query'] for query in queries.values()]
+        for query in queries.values():
+            possible_sitelinks += [p['v'] for p in query.get('properties', [])]
+        # (this is cached in redis)
+        sitelinks_to_qids = self.sitelink_fetcher.sitelinks_to_qids(
+            possible_sitelinks)
 
         # Fetch all candidate qids for each query
         qids = {}
@@ -129,6 +134,7 @@ class ReconcileEngine(object):
             num_results_before_filter = min([2*num_results, wd_api_max_search_results])
 
             # If the text query is actually a QID, just return the QID itself
+            # (same for sitelinks, but with conversion)
             query_as_qid = to_q(query['query'])
             query_as_sitelink = SitelinkFetcher.normalize(query['query'])
             qid_from_sitelink = None
