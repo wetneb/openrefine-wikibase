@@ -97,6 +97,9 @@ class ReconcileEngineTest(unittest.TestCase):
         self.assertTrue(
             self.best_score('Oxford', properties=[{'pid':'P17', 'v':'https://en.wikipedia.org/wiki/Cambridge'}])
             < 90)
+        self.assertEqual(
+            self.best_score('Oxford', properties=[{'pid':'P17', 'v':'https://en.wikipedia.org/wiki/United Kingdom'}]),
+            100)
 
     def test_unique_id(self):
         """

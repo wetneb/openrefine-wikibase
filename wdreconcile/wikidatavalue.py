@@ -137,7 +137,9 @@ class ItemValue(WikidataValue):
         # Then check for a sitelink
         sitelink = SitelinkFetcher.normalize(s)
         if sitelink:
-            return 100 # TODO cache sitelinks and do as above
+            target_qid = item_store.sitelink_fetcher.sitelinks_to_qids(
+                [sitelink]).get(sitelink)
+            return 100 if target_qid == self.id else 0
 
         # Then check for a novalue match
         if not s and self.is_novalue():

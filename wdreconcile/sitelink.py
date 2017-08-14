@@ -29,6 +29,11 @@ class SitelinkFetcher(object):
     sitelink_regex = re.compile(
         r'^https?://([a-z]*)\.('+wikimedia_sites+')\.org/wiki/(['+legal_title_chars+']+)$')
 
+    def __init__(self, redis_client):
+        self.r = redis_client
+        self.prefix = 'openrefine_wikidata:sitelinks'
+        self.ttl = 60*60 # one hour
+
     @classmethod
     def normalize(cls, sitelink):
         """
@@ -64,28 +69,23 @@ class SitelinkFetcher(object):
     @classmethod
     def get_qids(cls, sitelinks):
         """
-        Given a list of candidate sitelinks, return a list of
+        Given a list of normalized sitelinks, return a list of
         the Qids they are associated to (or None if they are invalid,
         or not linked yet).
 
-        >>> SitelinkFetcher.get_qids(['https://de.wikipedia.org/wiki/Chelsea Manning', 'http://gnu.org'])
+        >>> SitelinkFetcher.get_qids(['https://de.wikipedia.org/wiki/Chelsea_Manning', None])
         ['Q298423', None]
-        >>> SitelinkFetcher.get_qids(['https://a.com/', 'http://b.org/']) # no request made
+        >>> SitelinkFetcher.get_qids([None, None]) # no request made
         [None, None]
         """
         result = [None] * len(sitelinks)
 
-        normalized_sitelinks = [
-            cls.normalize(sitelink)
-            for sitelink in sitelinks
-        ]
-
-        if all(sitelink is None for sitelink in normalized_sitelinks):
+        if all(sitelink is None for sitelink in sitelinks):
             return result
 
         sitelink_list = ' '.join(
            '<%s>' % sitelink
-            for sitelink in normalized_sitelinks
+            for sitelink in sitelinks
             if sitelink
         )
 
@@ -101,24 +101,54 @@ class SitelinkFetcher(object):
             qid = to_q(binding["item"]["value"])
             sitelink = binding["sitelink"]["value"]
             try:
-                idx = normalized_sitelinks.index(sitelink)
+                idx = sitelinks.index(sitelink)
                 result[idx] = qid
             except ValueError:
                 print('Normalization error for sitelink: "{}"'.format(sitelink))
 
         return result
 
-    @classmethod
-    def sitelinks_to_qids(cls, sitelinks):
-        """
-        Same as get_qids, but returns a dictionary from the sitelinks to the qids
+    def _key_for_sitelink(self, sitelink):
+        return ':'.join([self.prefix, sitelink])
 
-        >>> SitelinkFetcher.sitelinks_to_qids(['https://de.wikipedia.org/wiki/Chelsea Manning'])
-        {'https://de.wikipedia.org/wiki/Chelsea_Manning': 'Q298423'}
+    def sitelinks_to_qids(self, sitelinks):
         """
-        normalized = list(map(cls.normalize, sitelinks))
-        qids = cls.get_qids(normalized)
-        return {
-            sitelink:qid
-            for sitelink, qid in zip(normalized, qids)
-        }
+        Same as get_qids, but uses redis to cache the results, and normalizes its input,
+        and returns the results as a dictionary..
+        """
+        normalized_sitelinks = list(map(SitelinkFetcher.normalize, sitelinks))
+        non_nulls = [ sitelink for sitelink in normalized_sitelinks if sitelink ]
+        result = {}
+        to_fetch = set()
+
+        if not non_nulls:
+            return result
+
+        # Query the cache for existing mappings
+        current_values = self.r.mget([
+            self._key_for_sitelink(sitelink)
+            for sitelink in non_nulls])
+        for i, v in enumerate(current_values):
+            if v is None:
+                to_fetch.add(non_nulls[i])
+            else:
+                result[non_nulls[i]] = v
+
+        to_fetch = list(to_fetch)
+        fetched = SitelinkFetcher.get_qids(to_fetch)
+        to_write = {}
+        for i, v in enumerate(fetched):
+            if v:
+                to_write[to_fetch[i]] = v
+        result.update(to_write)
+
+        # Write newly-fetched qids to the cache
+        if to_write:
+            self.r.mset({self._key_for_sitelink(sitelink) : qid
+                    for sitelink, qid in to_write.items()})
+        for sitelink in to_write:
+            self.r.expire(self._key_for_sitelink(sitelink), self.ttl)
+
+        return result
+
+
