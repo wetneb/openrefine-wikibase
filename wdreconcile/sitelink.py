@@ -1,5 +1,6 @@
 
 import re
+from urllib.parse import quote_plus
 
 from .sparqlwikidata import sparql_wikidata
 from .utils import to_q
@@ -35,6 +36,16 @@ class SitelinkFetcher(object):
         self.ttl = 60*60 # one hour
 
     @classmethod
+    def safe_quote(cls, url):
+        """
+        Escapes an URL, but only if it hasn't been escaped yet!
+        """
+        url_without_percent = url.replace('%','')
+        if quote_plus(url_without_percent) != url_without_percent:
+            return quote_plus(url)
+        return url
+
+    @classmethod
     def normalize(cls, sitelink):
         """
         Given a candidate sitelink, normalize it,
@@ -46,6 +57,10 @@ class SitelinkFetcher(object):
         'https://fr.wikipedia.org/wiki/Alan_Turing'
         >>> SitelinkFetcher.normalize('https://de.wikiquote.org/wiki/Chelsea Manning')
         'https://de.wikiquote.org/wiki/Chelsea_Manning'
+        >>> SitelinkFetcher.normalize('https://de.wikiquote.org/wiki/Brüssel')
+        'https://de.wikiquote.org/wiki/Br%C3%BCssel'
+        >>> SitelinkFetcher.normalize('https://de.wikiquote.org/wiki/Br%C3%BCssel')
+        'https://de.wikiquote.org/wiki/Br%C3%BCssel'
         >>> SitelinkFetcher.normalize('https://www.wikimedia.org/') is None
         True
         >>> SitelinkFetcher.normalize('https://fr.wikipedia.org/wiki/') is None
@@ -57,7 +72,9 @@ class SitelinkFetcher(object):
         match = cls.sitelink_regex.match(sitelink)
         if not match:
             return None
-        cleaned_title = match.group(3).replace('%20', ' ').replace(' ', '_')
+
+        cleaned_title = cls.safe_quote(match.group(3).replace('%20', ' ').replace(' ', '_'))
+
         wiki = match.group(2)
         if wiki not in cls.wikimedia_sites_without_capitalization:
             cleaned_title = cleaned_title[0].upper()+cleaned_title[1:]
