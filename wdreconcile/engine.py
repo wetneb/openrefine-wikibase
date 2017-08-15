@@ -210,7 +210,7 @@ class ReconcileEngine(object):
                     ])
                     for target_type in target_types])
             else: # Check if we should ignore this item
-                good_type = not any([
+                good_type = not all([
                    self.type_matcher.is_subclass(typ, self.avoid_type)
                    for typ in current_types
                 ])

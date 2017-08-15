@@ -89,10 +89,10 @@ class ReconcileEngineTest(unittest.TestCase):
 
     def test_sitelink(self):
         self.assertEqual(
-            self.best_match_id('https://de.wikipedia.org/wiki/Chelsea Manning'),
-            'Q298423')
+            self.best_match_id('https://de.wikipedia.org/wiki/Brüssel'),
+            'Q9005')
         self.assertEqual(
-            self.best_score('https://de.wikipedia.org/wiki/Chelsea Manning'),
+            self.best_score('https://de.wikipedia.org/wiki/Brüssel'),
             100)
         self.assertTrue(
             self.best_score('Oxford', properties=[{'pid':'P17', 'v':'https://en.wikipedia.org/wiki/Cambridge'}])
