@@ -8,15 +8,17 @@ https://tools.wmflabs.org/openrefine-wikidata/en/api
 This is a new reconciliation interface, with the following features:
 * Matching columns with Wikidata properties, to improve the fuzzy
   matching score ;
-* Optimized for speed with redis caching at various places, API calls
-  kept to the minimum ;
 * Autocomplete for properties and items ;
 * Support for SPARQL-like property paths such as "P17/P297" (which fetches the ISO code of the country of an item) ;
 * Language selection (use /$lng/api as endpoint, where $lng is your
-  language code).
+  language code) ;
+* Reconciliation from Wikipedia links.
 
-TODO:
-* Better scoring.
+TODO (Pull requests welcome!)
+* Flyout service ;
+* Better scoring ;
+* Web-based interface ;
+* More optimization for speed.
 
 ![Screenshot](https://tools.wmflabs.org/openrefine-wikidata/static/screenshot_items.png)
 
