@@ -15,7 +15,6 @@ This is a new reconciliation interface, with the following features:
 * Reconciliation from Wikipedia links.
 
 TODO (Pull requests welcome!)
-* Flyout service ;
 * Better scoring ;
 * Web-based interface ;
 * More optimization for speed.
