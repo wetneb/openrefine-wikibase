@@ -95,14 +95,17 @@ def api(args):
                 'type' : {
                     'service_url' : this_host,
                     'service_path' : '/%s/suggest/type' % lang,
+                    'flyout_service_path' : '/%s/flyout/type?id=${id}' % lang,
                 },
                 'property' : {
                     'service_url' : this_host,
                     'service_path' : '/%s/suggest/property' % lang,
+                    'flyout_service_path' : '/%s/flyout/property?id=${id}' % lang,
                 },
                 'entity' : {
                     'service_url' : this_host,
                     'service_path' : '/%s/suggest/entity' % lang,
+                    'flyout_service_path' : '/%s/flyout/entity?id=${id}' % lang,
                 }
             },
             'preview' : {
@@ -214,7 +217,7 @@ def preview(args):
 
 @route('/<lang>/suggest/type', method=['GET','POST'])
 @jsonp
-def suggest_property(args, lang):
+def suggest_type(args, lang):
     args['lang'] = lang
     return suggest.find_type(args)
 
@@ -226,9 +229,29 @@ def suggest_property(args, lang):
 
 @route('/<lang>/suggest/entity', method=['GET','POST'])
 @jsonp
-def suggest_property(args, lang):
+def suggest_entity(args, lang):
     args['lang'] = lang
     return suggest.find_entity(args)
+
+@route('/<lang>/flyout/type', method=['GET','POST'])
+@jsonp
+def flyout_type(args, lang):
+    args['lang'] = lang
+    return suggest.flyout_type(args)
+
+@route('/<lang>/flyout/property', method=['GET','POST'])
+@jsonp
+def flyout_property(args, lang):
+    args['lang'] = lang
+    return suggest.flyout_property(args)
+
+@route('/<lang>/flyout/entity', method=['GET','POST'])
+@jsonp
+def flyout_entity(args, lang):
+    args['lang'] = lang
+    return suggest.flyout_entity(args)
+
+
 
 @route('/<lang>/preview', method=['GET','POST'])
 @jsonp

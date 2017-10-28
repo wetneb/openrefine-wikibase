@@ -84,13 +84,7 @@ class SuggestEngine(object):
         lang = args.get('lang')
         image = self.get_image_for_item(item_value, item, lang)
 
-        desc = lngfb(item.get('descriptions'), lang)
-        if desc:
-            desc = html_escape(desc)
-
-        # if the description is really too short
-        if not desc or not ' ' in desc:
-            desc = autodescribe(id, lang)
+        desc = self.get_description(item, lang)
 
         args = {
             'id':id,
@@ -109,15 +103,23 @@ class SuggestEngine(object):
         results (not from full representations of JSON
         items, that's in ItemStore).
         """
-        typ = item.get('match', {}).get('type')
-        lang = item.get('match', {}).get('language')
-        if typ == 'label' or typ == 'alias' and lang == target_lang:
-            return item['match']['text']
         if 'label' in item:
             return item['label']
-        aliases = item.get('aliases')
-        if aliases:
-            return aliases[0]
+        return item['id']
+
+    def get_description(self, item, lang):
+        """
+        Gets a description from an item and target language.
+        """
+        desc = lngfb(item.get('descriptions'), lang)
+        if desc:
+            desc = html_escape(desc)
+
+        # if the description is really too short
+        if not desc or not ' ' in desc:
+            desc = autodescribe(id, lang)
+
+        return desc
 
     def find_something(self, args, typ='item', prefix=''):
         lang = args.get('lang', 'en')
@@ -155,6 +157,24 @@ class SuggestEngine(object):
             except ValueError:
                 pass
         return self.find_something(args, 'property', "Property:")
+
+    def flyout_type(self, args):
+        return self.flyout(args)
+
+    def flyout_entity(self, args):
+        return self.flyout(args)
+
+    def flyout_property(self, args):
+        return self.flyout(args)
+
+    def flyout(self, args):
+        id = args.get('id')
+        lang = args.get('lang', 'en')
+        html = None
+        if id:
+            item = self.store.get_item(id)
+            html = '<p>%s</p>' % self.get_description(item, lang)
+        return {'id':id, 'html':html}
 
     def find_entity(self, args):
         return self.find_something(args)
