@@ -66,7 +66,10 @@ def api(args):
     start_time = time.time()
 
     if query:
-        query = json.loads(query)
+        try:
+       	    query = json.loads(query)
+        except ValueError:
+            query = {'query':query}
         result = reconcile.process_single_query(query,
                 default_language=lang)
         processing_time = time.time() - start_time
