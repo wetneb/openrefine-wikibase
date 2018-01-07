@@ -300,7 +300,10 @@ class ReconcileEngine(object):
                 {'id':id, 'name':self.item_store.get_label(id, default_language)}
                     for id in scored_items[i]['type']]
 
-        ranked_items = sorted(scored_items, key=lambda i: -i.get('score', 0))
+        # sorting by inverse qid size for issue #26
+        # we might want to replace that by something smarter like PageRank, but
+        # this is very cheap to compute
+        ranked_items = sorted(scored_items, key=lambda i: (-int(i.get('score', 0)), int(i['id'][1:])))
 
         if ranked_items:
             # Decide if we trust the first match

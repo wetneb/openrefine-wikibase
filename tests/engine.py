@@ -102,9 +102,24 @@ class ReconcileEngineTest(unittest.TestCase):
             100)
 
     def test_reconciled_properties(self):
+        """
+        For issue #32
+        """
         self.assertEqual(
             self.best_score('Oxford', properties=[{'pid':'P17', 'v':{'id':'Q145'}}]),
             100)
+
+    def test_shortest_qid_first(self):
+        """
+        We could one day want to replace this by something
+        more clever like PageRank
+
+        For issue #26
+        """
+        self.assertEqual(
+            self.best_match_id('Amsterdam'),
+            'Q727'
+        )
 
     def test_unique_id(self):
         """
