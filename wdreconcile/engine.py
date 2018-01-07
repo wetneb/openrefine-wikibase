@@ -63,7 +63,11 @@ class ReconcileEngine(object):
         pid = prop['pid']
         path = self.pf.parse(pid)
         prop['path'] = path
-        prop['v'] = str(prop.get('v')).strip()
+        val = prop.get('v')
+        try:
+            prop['v'] = str(val['id'])
+        except (TypeError, KeyError):
+            prop['v'] = str(val).strip()
 
         # This indicates whether the property is a unique
         # identifier for the resolved items. If so, we can use it
