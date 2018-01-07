@@ -101,6 +101,11 @@ class ReconcileEngineTest(unittest.TestCase):
             self.best_score('Oxford', properties=[{'pid':'P17', 'v':'https://en.wikipedia.org/wiki/United Kingdom'}]),
             100)
 
+    def test_reconciled_properties(self):
+        self.assertEqual(
+            self.best_score('Oxford', properties=[{'pid':'P17', 'v':{'id':'Q145'}}]),
+            100)
+
     def test_unique_id(self):
         """
         We can fetch items by unique ids!
