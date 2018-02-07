@@ -60,6 +60,10 @@ class SuggestEngineTest(unittest.TestCase):
             self.best_match_id('property', 'P17/(P297|.)'),
             'P17/(P297|.)')
 
+    def test_description(self):
+        results = self.results('entity', 'Jacob Collier')
+        self.assertTrue(len(results[0]['description']) > 0)
+
     def test_custom_language(self):
         self.assertTrue('ville' in
             self.preview(id='Q350',lang='fr'))
