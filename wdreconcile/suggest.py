@@ -173,7 +173,7 @@ class SuggestEngine(object):
         html = None
         if id:
             item = self.store.get_item(id)
-            html = '<p>%s</p>' % self.get_description(item, lang)
+            html = '<p style="font-size: 0.8em; color: black;">%s</p>' % self.get_description(item, lang)
         return {'id':id, 'html':html}
 
     def find_entity(self, args):
