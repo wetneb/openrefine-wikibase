@@ -31,4 +31,10 @@ class TypeMatcherTest(unittest.TestCase):
             # another query, which should also be cached
             self.assertTrue(self.m.is_subclass('Q484170', 'Q486972'))
 
+    def test_disambig(self):
+	"""
+	We add this test to make sure disambiguation pages are instances
+	of "Wikimedia internal stuff" because we rely on it to filter them out
+	"""
+	self.assertTrue(self.m.is_subclass('Q4167410', 'Q17442446'))
 
