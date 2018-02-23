@@ -139,6 +139,7 @@ class SuggestEngine(object):
             {
              'id': item['id'],
              'name': self.get_label(item, lang),
+             'description': item.get('description'),
             }
             for item in search_results]
         return {'result':result}
