@@ -203,7 +203,7 @@ class ReconcileEngine(object):
             itemvalue = ItemValue(id=qid)
 
             # Check the type if we have a type constraint
-            current_types = [val.id for val in self.p31_property_path.step(itemvalue)]
+            current_types = [val.id for val in self.p31_property_path.step(itemvalue) if not val.is_novalue()]
             type_found = len(current_types) > 0
 
             if target_types:
