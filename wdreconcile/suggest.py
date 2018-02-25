@@ -44,7 +44,9 @@ def autodescribe(qid, lang):
         desc = r.json().get('result', '')
         desc = desc.replace('<a href', '<a target="_blank" href')
         return desc
-    except (requests.exceptions.RequestException, ValueError):
+    except (requests.exceptions.RequestException, ValueError) as e:
+        print(e)
+        print(e.request.url)
         return ''
 
 class SuggestEngine(object):
@@ -111,15 +113,11 @@ class SuggestEngine(object):
         """
         Gets a description from an item and target language.
         """
-        desc = lngfb(item.get('descriptions'), lang)
-        if desc:
-            desc = html_escape(desc)
-
-        # if the description is really too short
-        if not desc or not ' ' in desc:
-            desc = autodescribe(id, lang)
-
-        return desc
+        descriptions = item.get('descriptions')
+        if lang in descriptions and ' ' in descriptions[lang]:
+            return html_escape(descriptions[lang])
+        else:
+            return autodescribe(item['id'], lang)
 
     def find_something(self, args, typ='item', prefix=''):
         lang = args.get('lang', 'en')
