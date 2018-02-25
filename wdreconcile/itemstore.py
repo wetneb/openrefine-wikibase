@@ -110,7 +110,7 @@ class ItemStore(object):
         Simplifies the JSON payload returned by the API,
         for compactness and usefulness downstream in the pipeline
         """
-        simplified = {}
+        simplified = {'id':item['id']}
 
         # Add labels
         labels = {}
