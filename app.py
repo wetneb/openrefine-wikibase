@@ -3,7 +3,7 @@ import bottle
 import json
 import time
 
-from bottle import route, run, request, default_app, template, HTTPError, abort
+from bottle import route, run, request, default_app, template, HTTPError, abort, HTTPResponse
 from docopt import docopt
 from wdreconcile.engine import ReconcileEngine
 from wdreconcile.suggest import SuggestEngine
@@ -41,7 +41,8 @@ def jsonp(view):
         if status_code == 200:
             return result
         else:
-            abort(status_code, result)
+            result['arguments'] = args
+            return HTTPResponse(result, status=status_code)
 
     return wrapped
 
