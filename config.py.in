@@ -28,6 +28,7 @@ headers = {
 # Previewing settings
 
 # Dimensions of the preview
+zoom_ratio = 1.0
 preview_height = 90
 preview_width = 320
 

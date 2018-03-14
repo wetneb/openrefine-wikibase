@@ -1,0 +1,23 @@
+<html><head><meta charset="utf-8" />
+<style>
+  #wd {
+  -moz-transform: scale({{zoom_ratio}}, {{zoom_ratio}}); 
+  -webkit-transform: scale({{zoom_ratio}}, {{zoom_ratio}}); 
+  -o-transform: scale({{zoom_ratio}}, {{zoom_ratio}});
+  -ms-transform: scale({{zoom_ratio}}, {{zoom_ratio}});
+  transform: scale({{zoom_ratio}}, {{zoom_ratio}}); 
+  -moz-transform-origin: top left;
+  -webkit-transform-origin: top left;
+  -o-transform-origin: top left;
+  -ms-transform-origin: top left;
+  transform-origin: top left;
+  }
+</style>
+</head>
+<body style="margin: 0px; width: {{finalwidth}}px; height: {{finalheight}}px">
+<div style="overflow: hidden; width: {{finalwidth}}px; height: {{finalheight}}px">
+<iframe id="wd" width="{{width}}px" height="{{height}}px" src="https://m.wikidata.org/wiki/{{ id }}?uselang={{ lang }}"></iframe>
+</div>
+</body>
+</html>
+
