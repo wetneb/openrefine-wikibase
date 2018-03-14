@@ -12,7 +12,7 @@ from .propertypath import PropertyFactory
 from .sparqlwikidata import sparql_wikidata
 from .wikidatavalue import ItemValue
 
-from config import preview_height, preview_width, thumbnail_width
+from config import preview_height, preview_width, thumbnail_width, zoom_ratio
 from config import image_properties, this_host
 from config import default_type_entity, property_for_this_type_property
 
@@ -59,6 +59,8 @@ class SuggestEngine(object):
         self.image_path = self.ft.parse('|'.join(image_properties))
         with open('templates/preview.html') as f:
             self.preview_template = SimpleTemplate(f.read(), noescape=True)
+        with open('templates/mobile_preview.html') as f:
+            self.mobile_preview_template = SimpleTemplate(f.read(), noescape=True)
 
     def get_image_statements(self, item_value):
         image_values = self.image_path.step(item_value)
@@ -98,6 +100,24 @@ class SuggestEngine(object):
             'height': preview_height,
         }
         return self.preview_template.render(**args)
+
+    def mobile_preview(self, args):
+        id = args['id']
+        item_value = ItemValue(id=id)
+        item = self.store.get_item(id)
+        lang = args.get('lang')
+
+        args = {
+            'id':id,
+            'lang':lang,
+            'zoom_ratio':zoom_ratio,
+            'width':int(preview_width / zoom_ratio),
+            'height':int(preview_height / zoom_ratio),
+            'finalwidth': preview_width,
+            'finalheight':preview_height,
+        }
+        return self.mobile_preview_template.render(**args)
+
 
     def get_label(self, item, target_lang):
         """

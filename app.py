@@ -113,7 +113,7 @@ def api(args):
                 }
             },
             'preview' : {
-                'url': this_host+'/%s/preview?id={{id}}' % lang,
+                'url':  this_host+'/%s/mobile_preview?id={{id}}' % lang,
                 'width' : preview_width,
                 'height': preview_height,
             },
@@ -256,12 +256,18 @@ def flyout_entity(args, lang):
     return suggest.flyout_entity(args)
 
 
-
 @route('/<lang>/preview', method=['GET','POST'])
 @jsonp
 def preview(args, lang):
     args['lang'] = lang
     return suggest.preview(args)
+
+@route('/<lang>/mobile_preview', method=['GET','POST'])
+@jsonp
+def mobile_preview(args, lang):
+    args['lang'] = lang
+    return suggest.mobile_preview(args)
+
 
 @route('/fetch_values', method=['GET','POST'])
 @jsonp
