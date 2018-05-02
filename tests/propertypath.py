@@ -4,7 +4,7 @@ from funcparserlib.lexer import Token
 
 from wdreconcile.propertypath import PropertyFactory
 from wdreconcile.propertypath import tokenize_property
-from wdreconcile.wikidatavalue import QuantityValue, ItemValue, IdentifierValue, StringValue
+from wdreconcile.wikidatavalue import QuantityValue, ItemValue, IdentifierValue, StringValue, TimeValue
 from wdreconcile.itemstore import ItemStore
 
 from config import redis_client
@@ -52,6 +52,11 @@ class PropertyTest(unittest.TestCase):
     def resolve(self, exp, qid):
         path = self.f.parse(exp)
         return list(path.step(ItemValue(id=qid)))
+
+    def test_datetime(self):
+        self.assertEqual(
+            self.resolve('P571', 'Q34433'),
+            [TimeValue(precision=9,before=0,timezone=0,after=0,calendarmodel='http://www.wikidata.org/entity/Q1985727',time='+1096-01-01T00:00:00Z')])
 
     def test_resolve_property_path(self):
         self.assertEqual(
