@@ -395,7 +395,7 @@ class TimeValue(WikidataValue):
     - before
     - after
     - precision
-    - calglobe-coordinateendarmodel
+    - calendarmodel
     """
     value_type = "time"
 
@@ -405,7 +405,7 @@ class TimeValue(WikidataValue):
         if time.startswith('+'):
             time = time[1:]
         try:
-            self.parsed = dateutil.parser.parse(time)
+            self.parsed = dateutil.parser.parse(time.replace('-00','-01'))
         except ValueError:
             self.parsed = None
 
@@ -426,9 +426,12 @@ class TimeValue(WikidataValue):
         return self.parsed is None
 
     def _as_cell(self, lang, item_store):
-        return {
-            'date': self.parsed.isoformat()
-        }
+        if self.parsed:
+            return {
+                'date': self.parsed.isoformat()
+            }
+        else:
+            return None
 
 @register
 class MediaValue(IdentifierValue):

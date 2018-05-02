@@ -8,12 +8,13 @@ from .engine import *
 from .suggest import *
 from .propertypath import *
 from .utils import *
-from wdreconcile import subfields
-from wdreconcile import wikidatavalue
-from wdreconcile import sitelink
+from .wikidatavalue import *
 
 import doctest
 def load_tests(loader, tests, ignore):
+    from wdreconcile import subfields
+    from wdreconcile import wikidatavalue
+    from wdreconcile import sitelink
     tests.addTests(doctest.DocTestSuite(subfields))
     tests.addTests(doctest.DocTestSuite(wikidatavalue))
     tests.addTests(doctest.DocTestSuite(sitelink))

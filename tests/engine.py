@@ -236,3 +236,20 @@ class ReconcileEngineTest(unittest.TestCase):
             {"rows": {"Q142": {"P38": [{"float": 1}]}},
              "meta": [{"name": "currency", "id": "P38", "settings" : {"count": "on","rank":"best"}}]})
 
+    def test_fetch_years(self):
+        self.assertDictEqual(
+            self.r.fetch_properties_by_batch({"lang":"en","extend":{"ids":["Q34433"],"properties":[{"id":"P571"}]}}),
+            {
+                "rows": {
+                    "Q34433": {
+                        "P571": [{'date': '1096-01-01T00:00:00+00:00'}]
+                    }
+                },
+                "meta": [
+                    {
+                        "name": "inception",
+                        "id": "P571"
+                    }
+                ]
+
+            })
