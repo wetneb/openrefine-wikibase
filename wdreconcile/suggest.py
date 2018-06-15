@@ -127,6 +127,7 @@ class SuggestEngine(object):
                  'type':typ,
                  'search':args['prefix'],
                  'language':lang,
+                 'uselang':lang,
                  })
         r.raise_for_status()
         resp = r.json()
@@ -137,7 +138,6 @@ class SuggestEngine(object):
             {
              'id': item['id'],
              'name': self.get_label(item, lang),
-             'notable': ['Q42'],
              'description': item.get('description'),
             }
             for item in search_results]
