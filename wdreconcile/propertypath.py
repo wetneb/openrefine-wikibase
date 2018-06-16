@@ -364,8 +364,6 @@ class LeafProperty(PropertyPath):
             # TODO handle nowiki case
             mainsnak = claim.get('mainsnak')
             if not mainsnak:
-                print('no mainsnak')
-                print(claim)
                 continue
             v = WikidataValue.from_datavalue(mainsnak)
             yield v
@@ -415,9 +413,9 @@ class TermPath(PropertyPath):
             if self.lang in dct:
                 yield IdentifierValue(value=dct[self.lang])
         elif self.term_type == 'A':
-            dct = item.get('aliases') or {}
+            dct = item.get('full_aliases') or {}
             for alias in dct.get(self.lang) or []:
-                yield IdentifierValue(value=dct[self.lang])
+                yield IdentifierValue(value=alias)
 
     def __str__(self, add_prefix=False):
         return self.term_type + self.lang
