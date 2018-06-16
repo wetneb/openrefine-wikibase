@@ -35,6 +35,8 @@ class PropertyTest(unittest.TestCase):
             '(P131/P17|P17)',
             'P14/(P131/P17|P17)',
             'P131/(P17|.)',
+            'P17/Len',
+            '(Len|Afi)'
         ]
         for sample in samples:
             self.assertEqual(str(self.f.parse(sample)), sample)
@@ -99,6 +101,12 @@ class PropertyTest(unittest.TestCase):
             set(self.resolve('P17|(P749/P17)', # brackets not actually needed
                         'Q1011981')),
                     {ItemValue(id='Q148'),ItemValue(id='Q30')}) # USA + China
+
+        # With term
+        self.assertEqual(
+            self.resolve('P17/Lfr', 'Q83259'),
+            [IdentifierValue(value='France')]
+        )
 
     def value_types(self, path, qid):
         return {v.value_type
@@ -170,6 +178,8 @@ class PropertyTest(unittest.TestCase):
             self.f.parse('P3500/P2427').is_unique_identifier())
         self.assertFalse(
             self.f.parse('(P3500|P17)').is_unique_identifier())
+        self.assertFalse(
+            self.f.parse('(P3500|Len)').is_unique_identifier())
 
     def fetch_by_values(self, path_string, values, lang='en'):
         path = self.f.parse(path_string)

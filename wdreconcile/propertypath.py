@@ -13,13 +13,14 @@ from .utils import to_p
 from .utils import to_q
 from .sparqlwikidata import sparql_wikidata
 from .subfields import subfield_factory
-from .wikidatavalue import WikidataValue, ItemValue
+from .wikidatavalue import WikidataValue, ItemValue, IdentifierValue
 from config import subject_item_of_this_property_pid
 from .language import language_fallback
 
 property_lexer_specs = [
     ('DOT', (r'\.',)),
     ('PID', (r'P\d+',)),
+    ('TERM', (r'[LDA][a-z\-]+',)),
     ('SLASH', (r'/',)),
     ('PIPE', (r'\|',)),
     ('LBRA', (r'\(',)),
@@ -54,6 +55,7 @@ class PropertyFactory(object):
 
         atomic.define(
             (t('PID') >> self.make_leaf) |
+            (t('TERM') >> self.make_term) |
             (t('DOT') >> self.make_empty) |
             (st('LBRA') + pipe_path + st('RBRA'))
         )
@@ -87,6 +89,9 @@ class PropertyFactory(object):
 
     def make_leaf(self, pid):
         return LeafProperty(self, pid.value)
+
+    def make_term(self, term):
+        return TermPath(self, term.value[0], term.value[1:])
 
     def make_slash(self, lst):
         return ConcatenatedPropertyPath(self, lst[0], lst[1])
@@ -386,6 +391,49 @@ class LeafProperty(PropertyPath):
 
     def readable_name(self, lang):
         return self.item_store.get_label(self.pid, lang)
+
+class TermPath(PropertyPath):
+    """
+    A node for accessing the terms (label, description and aliases) of an item
+    """
+    def __init__(self, factory, term_type, lang):
+        super(TermPath, self).__init__(factory)
+        self.term_type = term_type
+        self.lang = lang
+
+    def step(self, v, referenced='any', rank='any'):
+        if v.value_type != 'wikibase-item':
+            return []
+
+        item = self.get_item(v)
+        if self.term_type == 'L':
+            dct = item.get('labels') or {}
+            if self.lang in dct:
+                yield IdentifierValue(value=dct[self.lang])
+        elif self.term_type == 'D':
+            dct = item.get('descriptions') or {}
+            if self.lang in dct:
+                yield IdentifierValue(value=dct[self.lang])
+        elif self.term_type == 'A':
+            dct = item.get('aliases') or {}
+            for alias in dct.get(self.lang) or []:
+                yield IdentifierValue(value=dct[self.lang])
+
+    def __str__(self, add_prefix=False):
+        return self.term_type + self.lang
+
+    def uniform_depth(self):
+        raise ValueError('One property is not an identifier')
+
+    def expected_types(self):
+        """
+        Retrieve the expected type from Wikidata
+        """
+        return []
+
+    def readable_name(self, lang):
+        return self.term_type + self.lang
+
 
 class ConcatenatedPropertyPath(PropertyPath):
     """
