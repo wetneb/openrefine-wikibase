@@ -65,6 +65,10 @@ class PropertyTest(unittest.TestCase):
             self.resolve('P297', 'Q142'),
             [IdentifierValue(value='FR')])
 
+        self.assertTrue(
+            IdentifierValue(value='FR') in
+            self.resolve('Afr', 'Q142'))
+
         self.assertEqual(
             self.resolve('P17/P297', 'Q83259'),
             [IdentifierValue(value='FR')])

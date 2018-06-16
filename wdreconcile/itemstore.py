@@ -125,12 +125,18 @@ class ItemStore(object):
         simplified['descriptions'] = descriptions
 
         # Add aliases (we don't remember the language for these)
+        # TODO migrate everything to full_aliases
         aliases = set()
+        full_aliases = {}
         for lang, lang_aliases in item.get('aliases', {}).items():
+            alias_dct = []
             for lang_alias in lang_aliases:
                 aliases.add(lang_alias['value'])
+                alias_dct.append(lang_alias['value'])
+            full_aliases[lang] = alias_dct
 
         simplified['aliases'] = list(aliases)
+        simplified['full_aliases'] = full_aliases
 
         # Add other properties
         for prop_id, claims in item.get('claims', {}).items():
