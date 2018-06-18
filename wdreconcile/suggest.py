@@ -52,7 +52,7 @@ def autodescribe(qid, lang):
 class SuggestEngine(object):
     def __init__(self, redis_client):
         self.r = redis_client
-        self.property_path_re = re.compile(r'(SPARQL ?:? ?)?(\(*P\d+[/\|@].*)$')
+        self.property_path_re = re.compile(r'(SPARQL ?:? ?)?(\(*(P\d+|[LAD][a-z\-]+)[/\|@].*)$')
         self.store = ItemStore(self.r)
         self.ft = PropertyFactory(self.store)
         self.store.ttl = 24*60*60 # one day
@@ -149,14 +149,19 @@ class SuggestEngine(object):
     def find_property(self, args):
         # Check first if we are dealing with a path
         s = (args.get('prefix') or '').strip()
+
+        sparql_match = []
         match = self.property_path_re.match(s)
-        if match:
-            try:
-                parsed = self.ft.parse(match.group(2))
-                return {'result':[{'id':match.group(2),'name':'SPARQL: '+match.group(2)}]}
-            except ValueError:
-                pass
-        return self.find_something(args, 'property', "Property:")
+        try:
+            source_string = match.group(2) if match else s
+            parsed = self.ft.parse(source_string)
+            sparql_match = [{'id':source_string,'name':'SPARQL: '+source_string}]
+        except ValueError:
+            pass
+
+        # search for simple properties
+        search_results =  self.find_something(args, 'property', "Property:")['result']
+        return {'result':sparql_match + search_results}
 
     def flyout_type(self, args):
         return self.flyout(args)

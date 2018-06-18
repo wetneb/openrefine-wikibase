@@ -59,6 +59,15 @@ class SuggestEngineTest(unittest.TestCase):
         self.assertEqual(
             self.best_match_id('property', 'P17/(P297|.)'),
             'P17/(P297|.)')
+        self.assertEqual(
+            self.best_match_id('property', 'Len'),
+            'Len')
+        self.assertEqual(
+            self.best_match_id('property', 'Afr|Lfr'),
+            'Afr|Lfr')
+        self.assertEqual(
+            self.best_match_id('property', 'SPARQL: P17/P297'),
+            'P17/P297')
 
     def test_description(self):
         results = self.results('entity', 'Jacob Collier')
