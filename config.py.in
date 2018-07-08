@@ -9,6 +9,7 @@ should be used
 mediawiki_api_endpoint = 'https://www.wikidata.org/w/api.php'
 
 # Regexes and group ids to extracts Qids and Pids from URLs
+import re
 q_re = re.compile(r'(<?https?://www.wikidata.org/(entity|wiki)/)?(Q[0-9]+)>?')
 q_re_group_id = 3
 p_re = re.compile(r'(<?https?://www.wikidata.org/(entity/|wiki/Property:))?(P[0-9]+)>?')
