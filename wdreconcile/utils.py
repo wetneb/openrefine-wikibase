@@ -2,9 +2,8 @@ import re
 import math
 from fuzzywuzzy import fuzz
 from unidecode import unidecode
+import config
 
-q_re = re.compile(r'(<?https?://www.wikidata.org/(entity|wiki)/)?(Q[0-9]+)>?')
-p_re = re.compile(r'(<?https?://www.wikidata.org/(entity/|wiki/Property:))?(P[0-9]+)>?')
 
 def to_q(url):
     """
@@ -17,9 +16,9 @@ def to_q(url):
     """
     if type(url) != str:
         return
-    match = q_re.match(url.strip())
+    match = config.q_re.match(url.strip())
     if match:
-        return match.group(3)
+        return match.group(config.q_re_group_id)
 
 def to_p(url):
     """
@@ -32,9 +31,9 @@ def to_p(url):
     """
     if type(url) != str:
         return
-    match = p_re.match(url.strip())
+    match = config.p_re.match(url.strip())
     if match:
-        return match.group(3)
+        return match.group(config.p_re_group_id)
 
 def fuzzy_match_strings(ref, val):
     """

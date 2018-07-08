@@ -1,4 +1,4 @@
-from config import *
+import config
 import requests
 import itertools
 import re
@@ -25,7 +25,7 @@ class ReconcileEngine(object):
         self.property_weight = 0.4
         self.validation_threshold_discount_per_property = 5
         self.match_score_gap = 10
-        self.avoid_type = 'Q17442446' # Wikimedia internal stuff
+        self.avoid_type = config.avoid_items_of_class
         self.p31_property_path = self.pf.parse('P31')
 
     def wikidata_string_search(self, query_string, num_results, default_language):
@@ -33,24 +33,24 @@ class ReconcileEngine(object):
         Use the Wikidata API to search for matching items
         """
         r = requests.get(
-            'https://www.wikidata.org/w/api.php',
+            config.mediawiki_api_endpoint,
             {'action':'query',
             'format':'json',
             'list':'search',
             'srnamespace':0,
             'srlimit':num_results,
             'srsearch':query_string},
-            headers=headers)
+            headers=config.headers)
         resp = r.json()
         search_results = [item['title'] for item in resp.get('query', {}).get('search', [])]
         r = requests.get(
-            'https://www.wikidata.org/w/api.php',
+            config.mediawiki_api_endpoint,
             {'action':'wbsearchentities',
             'format':'json',
             'language': default_language,
             'limit':num_results,
             'search':query_string},
-            headers=headers)
+            headers=config.headers)
         resp = r.json()
         autocomplete_results = [item['id'] for item in resp.get('search', [])]
 
@@ -134,8 +134,8 @@ class ReconcileEngine(object):
             # Otherwise, use the text query
             if 'query' not in query:
                 raise ValueError('No "query" provided')
-            num_results = int(query.get('limit') or default_num_results)
-            num_results_before_filter = min([2*num_results, wd_api_max_search_results])
+            num_results = int(query.get('limit') or config.default_num_results)
+            num_results_before_filter = min([2*num_results, config.wd_api_max_search_results])
 
             # If the text query is actually a QID, just return the QID itself
             # (same for sitelinks, but with conversion)
@@ -181,7 +181,7 @@ class ReconcileEngine(object):
         if type(target_types) != list:
             target_types = [target_types]
 
-        discounted_validation_threshold = (validation_threshold -
+        discounted_validation_threshold = (config.validation_threshold -
             self.validation_threshold_discount_per_property * len(properties))
 
         # retrieve corresponding items
@@ -213,11 +213,13 @@ class ReconcileEngine(object):
                         for typ in current_types
                     ])
                     for target_type in target_types])
-            else: # Check if we should ignore this item
+            elif self.avoid_type: # Check if we should ignore this item
                 good_type = not all([
                    self.type_matcher.is_subclass(typ, self.avoid_type)
                    for typ in current_types
                 ])
+            else:
+                good_type = True
 
             # If the type is invalid, skip the item.
             # If there is no type, we keep the item and will
@@ -313,7 +315,7 @@ class ReconcileEngine(object):
                 current_score > discounted_validation_threshold and
                 current_score > next_score + self.match_score_gap)
 
-        max_results = int(query.get('limit') or default_num_results)
+        max_results = int(query.get('limit') or config.default_num_results)
         return ranked_items[:max_results]
 
     def process_single_query(self, q, default_language='en'):
