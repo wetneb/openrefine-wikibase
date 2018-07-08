@@ -1,9 +1,29 @@
-import redis
 
-max_results = 20
+"""
+This file defines a few constants which configure
+which Wikibase instance and which property/item ids
+should be used
+"""
 
-# Service name exposed at various places
-service_name = 'DEV Wikidata Reconciliation for OpenRefine'
+# Endpoint of the MediaWiki API of the Wikibase instance
+mediawiki_api_endpoint = 'https://www.wikidata.org/w/api.php'
+
+# Regexes and group ids to extracts Qids and Pids from URLs
+q_re = re.compile(r'(<?https?://www.wikidata.org/(entity|wiki)/)?(Q[0-9]+)>?')
+q_re_group_id = 3
+p_re = re.compile(r'(<?https?://www.wikidata.org/(entity/|wiki/Property:))?(P[0-9]+)>?')
+p_re_group_id = 3
+
+# By default, filter out any items which are instance
+# of a subclass of this class.
+# For Wikidata, this is "Wikimedia internal stuff".
+# This filters out the disambiguation pages, categories, ...
+# Set to None to disable this filter
+avoid_items_of_class = 'Q17442446'
+
+# Service name exposed at various places,
+# mainly in the list of reconciliation services of users
+service_name = 'DEV Wikidata'
 
 # URL (without the trailing slash) where this server runs
 this_host = 'http://localhost:8000'
@@ -12,12 +32,13 @@ this_host = 'http://localhost:8000'
 default_num_results = 25
 
 # The maximum number of search results to retrieve from the Wikidata search API
-wd_api_max_search_results = 50 # you need a bot account to get more
+wd_api_max_search_results = 50 # need a bot account to get more
 
 # The matching score above which we should automatically match an item
 validation_threshold = 95
 
 # Redis client used for caching at various places
+import redis
 redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 # Headers for the HTTP requests made by the tool
@@ -28,8 +49,9 @@ headers = {
 # Previewing settings
 
 # Dimensions of the preview
-preview_height = 90
-preview_width = 320
+zoom_ratio = 1.0
+preview_height = 500
+preview_width = 400
 
 # With which should be requested from Commons for the thumbnail
 thumbnail_width = 130
