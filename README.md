@@ -23,8 +23,17 @@ TODO (Pull requests welcome!)
 
 MIT license.
 
-Running locally
----------------
+Running with Docker
+-------------------
+
+You can run this service with Docker:
+```
+docker pull pintoch/openrefine-wikibase
+docker run pintoch/openrefine-wikibase
+```
+
+Running manually
+----------------
 
 It is possible to run this web service locally. You will need Python 3 and a redis instance.
 
@@ -39,7 +48,7 @@ It is possible to run this web service locally. You will need Python 3 and a red
 
 On Debian-based systems, it looks as follows:
 ```
-sudo apt-get install git redis python3 virtualenv
+sudo apt-get install git redis-server python3 virtualenv
 git clone https://github.com/wetneb/openrefine-wikibase
 cd openrefine-wikibase
 virtualenv .venv
