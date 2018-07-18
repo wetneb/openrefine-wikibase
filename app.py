@@ -312,6 +312,6 @@ def monitor():
     return {'stats':monitoring.get_rates()}
 
 if __name__ == '__main__':
-    run(host='localhost', port=8000, debug=True)
+    run(host='0.0.0.0', port=8000, debug=True)
 
 app = application = default_app()
