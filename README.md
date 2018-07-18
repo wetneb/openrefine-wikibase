@@ -19,7 +19,7 @@ TODO (Pull requests welcome!)
 * Web-based interface ;
 * More optimization for speed.
 
-![Screenshot](https://tools.wmflabs.org/openrefine-wikibase/static/screenshot_items.png)
+![Screenshot](https://tools.wmflabs.org/openrefine-wikidata/static/screenshot_items.png)
 
 MIT license.
 
