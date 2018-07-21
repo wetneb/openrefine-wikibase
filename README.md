@@ -32,6 +32,11 @@ docker pull pintoch/openrefine-wikibase
 docker run pintoch/openrefine-wikibase
 ```
 
+On Windows you will need to expose the port so that get the Windows Firewall popup to accept on:
+```
+docker run -p 8000:8000 pintoch/openrefine-wikibase
+```
+
 Running manually
 ----------------
 
