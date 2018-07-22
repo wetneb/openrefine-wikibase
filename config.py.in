@@ -15,6 +15,17 @@ q_re_group_id = 3
 p_re = re.compile(r'(<?https?://www.wikidata.org/(entity/|wiki/Property:))?(P[0-9]+)>?')
 p_re_group_id = 3
 
+# Identifier space and schema space exposed to OpenRefine.
+# This should match the IRI prefixes used in RDF serialization.
+# Note that you should be careful about using http or https there,
+# because any variation will break comparisons at various places.
+identifier_space = 'http://www.wikidata.org/entity/'
+schema_space = 'http://www.wikidata.org/prop/direct/'
+
+# Pattern used to form the URL of a Qid.
+# This is only used for viewing so it is fine to use any protocol (therefore, preferably HTTPS if supported)
+qid_url_pattern = 'https://www.wikidata.org/wiki/{{id}}'
+
 # By default, filter out any items which are instance
 # of a subclass of this class.
 # For Wikidata, this is "Wikimedia internal stuff".
@@ -42,9 +53,12 @@ validation_threshold = 95
 import redis
 redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
+# Redis prefix to use in front of all keys
+redis_key_prefix = 'openrefine-wikidata:'
+
 # Headers for the HTTP requests made by the tool
 headers = {
-    'User-Agent':service_name,
+    'User-Agent':service_name + ' (OpenRefine-Wikibase reconciliation service)',
 }
 
 # Previewing settings
@@ -77,6 +91,20 @@ image_properties = [
     'P1621',
     'P154',
 ]
+
+# URL pattern to retrieve an image from its filename
+image_download_pattern = 'https://upload.wikimedia.org/wikipedia/commons/thumb/%s/%s/%s/%dpx-%s'
+
+# Fallback URL of the image to use when previewing an item with no image
+fallback_image_url = this_host + '/static/wikidata.png'
+
+# Alt text of the fallback image
+fallback_image_alt = 'Wikidata'
+
+# Autodescribe endpoint to use.
+# this is used to generate automatic descriptions from item contents.
+# (disable this with: autodescribe_endpoint = None )
+autodescribe_endpoint = 'https://tools.wmflabs.org/autodesc/'
 
 # Property proposal settings
 

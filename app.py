@@ -92,9 +92,9 @@ def api(args):
     else:
         identify = {
             'name':service_name + (' (%s)' % lang),
-            'view':{'url':'https://www.wikidata.org/wiki/{{id}}'},
-            'identifierSpace':'http://www.wikidata.org/entity/',
-            'schemaSpace':'http://www.wikidata.org/prop/direct/',
+            'view':{'url':qid_url_pattern},
+            'identifierSpace': identifier_space,
+            'schemaSpace': schema_space,
             'suggest' : {
                 'type' : {
                     'service_url' : this_host,
@@ -300,6 +300,7 @@ def home():
     with open('templates/index.html', 'r') as f:
         context = {
             'service_status_url': this_host+'/monitoring',
+            'endpoint_url': this_host+'/en/api',
         }
         return template(f.read(), **context)
 
