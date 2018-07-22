@@ -15,6 +15,10 @@ from .wikidatavalue import ItemValue
 from config import preview_height, preview_width, thumbnail_width
 from config import image_properties, this_host
 from config import default_type_entity, property_for_this_type_property
+from config import image_download_pattern, qid_url_pattern
+from config import mediawiki_api_endpoint, autodescribe_endpoint
+from config import fallback_image_url, fallback_image_alt
+from config import identifier_space, schema_space
 
 def commons_image_url(filename):
     filename = filename.replace(' ', '_')
@@ -22,7 +26,7 @@ def commons_image_url(filename):
     m.update(filename.encode('utf-8'))
     hashed = m.hexdigest()
     base_fname = (
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/%s/%s/%s/%dpx-%s' %
+        image_download_pattern %
         (hashed[0], hashed[0:2], filename, thumbnail_width, filename))
     if filename.lower().endswith('.svg'):
         base_fname += '.png'
@@ -32,8 +36,10 @@ def autodescribe(qid, lang):
     """
     Calls the autodesc API by Magnus
     """
+    if not autodescribe_endpoint:
+        return ''
     try:
-        r = requests.get('https://tools.wmflabs.org/autodesc/',
+        r = requests.get(autodescribe_endpoint,
             {'q':qid,
             'format':'json',
             'mode':'short',
@@ -77,7 +83,7 @@ class SuggestEngine(object):
             return (commons_image_url(images[0]),
                     lngfb(item.get('labels'), lang) or id)
         else:
-            return (this_host + '/static/wikidata.png', 'Wikidata')
+            return (fallback_image_url, fallback_image_alt)
 
     def preview(self, args):
         id = args['id']
@@ -93,7 +99,7 @@ class SuggestEngine(object):
             'label': html_escape(lngfb(item.get('labels'), lang) or id),
             'description': desc,
             'image': image,
-            'url': 'https://www.wikidata.org/entity/'+id,
+            'url': qid_url_pattern.replace('{{id}}',id),
             'width': preview_width,
             'height': preview_height,
         }
@@ -121,7 +127,7 @@ class SuggestEngine(object):
 
     def find_something(self, args, typ='item', prefix=''):
         lang = args.get('lang', 'en')
-        r = requests.get('https://www.wikidata.org/w/api.php',
+        r = requests.get(mediawiki_api_endpoint,
                 {'action':'wbsearchentities',
                  'format':'json',
                  'type':typ,
@@ -201,8 +207,8 @@ class SuggestEngine(object):
 
         property_for_this_type_property
         sparql_query = Template("""
-        PREFIX wd: <http://www.wikidata.org/entity/>
-        PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+        PREFIX wd: <$identifier_space>
+        PREFIX wdt: <$schema_space>
         PREFIX gas: <http://www.bigdata.com/rdf/gas#>
         SELECT ?prop ?propLabel ?depth WHERE {
         SERVICE gas:service {
@@ -225,6 +231,8 @@ class SuggestEngine(object):
             property_for_this_type=property_for_this_type_property,
             lang=args['lang'],
             limit=limit,
+            identifier_space=identifier_space,
+            schema_space=schema_space,
         )
         results = sparql_wikidata(sparql_query)
 

@@ -6,6 +6,7 @@ from collections import defaultdict
 
 from .sparqlwikidata import sparql_wikidata
 from .utils import to_q
+from config import redis_key_prefix, mediawiki_api_endpoint
 
 class SitelinkFetcher(object):
     """
@@ -35,7 +36,7 @@ class SitelinkFetcher(object):
 
     def __init__(self, redis_client):
         self.r = redis_client
-        self.prefix = 'openrefine_wikidata:sitelinks'
+        self.prefix = redis_key_prefix+'sitelinks'
         self.ttl = 60*60 # one hour
 
     @classmethod
@@ -137,7 +138,7 @@ class SitelinkFetcher(object):
                  'titles': title_string,
                  'format': 'json'}
         try:
-            r = requests.get('https://www.wikidata.org/w/api.php', params=params)
+            r = requests.get(mediawiki_api_endpoint, params=params)
             for qid, item in r.json().get('entities', {}).items():
                 own_title = item.get('sitelinks', {}).get(wiki_id, {}).get('title')
                 if own_title:

@@ -2,6 +2,7 @@ import requests
 import json
 from .language import language_fallback
 from .sitelink import SitelinkFetcher
+from config import redis_key_prefix, mediawiki_api_endpoint
 
 class ItemStore(object):
     """
@@ -10,7 +11,7 @@ class ItemStore(object):
     """
     def __init__(self, redis_client):
         self.r = redis_client
-        self.prefix = 'openrefine_wikidata:items'
+        self.prefix = redis_key_prefix+'items'
         self.ttl = 60*60 # one hour
         self.max_items_per_fetch = 50 # constraint from the Wikidata API
         self.sitelink_fetcher = SitelinkFetcher(redis_client)
@@ -89,7 +90,7 @@ class ItemStore(object):
             qids = list(qids)
 
         first_batch = qids[:self.max_items_per_fetch]
-        r = requests.get('https://www.wikidata.org/w/api.php',
+        r = requests.get(mediawiki_api_endpoint,
             {'action':'wbgetentities',
             'format':'json',
             'props':'aliases|labels|descriptions|claims',
