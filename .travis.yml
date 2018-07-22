@@ -21,7 +21,7 @@ install:
 
 before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
-  - cp config.py.in config.py
+  - cp config_wikidata.py config.py
   - pwd
 
 script:
