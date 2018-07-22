@@ -7,7 +7,7 @@ WORKDIR /openrefine-wikibase
 
 RUN apt-get update && apt-get install -qq python3 python3-pip redis-server
 RUN pip3 install -r requirements.txt
-RUN cp config.py.in config.py
+RUN cp config_wikidata.py config.py
 
 
 EXPOSE 8000
