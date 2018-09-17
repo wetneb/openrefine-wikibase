@@ -63,7 +63,7 @@ def api(args):
     query = args.get('query')
     queries = args.get('queries')
     extend = args.get('extend')
-    lang = args.get('lang','en')
+    lang = fix_lang(args.get('lang'))
     start_time = time.time()
 
     if query:
@@ -194,65 +194,61 @@ def api(args):
 @route('/suggest/type', method=['GET','POST'])
 @jsonp
 def suggest_property(args):
-    if 'lang' not in args:
-        args['lang'] = 'en'
+    args['lang'] = fix_lang(args.get('lang'))
     return suggest.find_type(args)
 
 @route('/suggest/property', method=['GET','POST'])
 @jsonp
 def suggest_property(args):
-    if 'lang' not in args:
-        args['lang'] = 'en'
+    args['lang'] = fix_lang(args.get('lang'))
     return suggest.find_property(args)
 
 @route('/suggest/entity', method=['GET','POST'])
 @jsonp
 def suggest_property(args):
-    if 'lang' not in args:
-        args['lang'] = 'en'
+    args['lang'] = fix_lang(args.get('lang'))
     return suggest.find_entity(args)
 
 @route('/preview', method=['GET','POST'])
 @jsonp
 def preview(args):
-    if 'lang' not in args:
-        args['lang'] = 'en'
+    args['lang'] = fix_lang(args.get('lang'))
     return suggest.preview(args)
 
 @route('/<lang>/suggest/type', method=['GET','POST'])
 @jsonp
 def suggest_type(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     return suggest.find_type(args)
 
 @route('/<lang>/suggest/property', method=['GET','POST'])
 @jsonp
 def suggest_property(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     return suggest.find_property(args)
 
 @route('/<lang>/suggest/entity', method=['GET','POST'])
 @jsonp
 def suggest_entity(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     return suggest.find_entity(args)
 
 @route('/<lang>/flyout/type', method=['GET','POST'])
 @jsonp
 def flyout_type(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     return suggest.flyout_type(args)
 
 @route('/<lang>/flyout/property', method=['GET','POST'])
 @jsonp
 def flyout_property(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     return suggest.flyout_property(args)
 
 @route('/<lang>/flyout/entity', method=['GET','POST'])
 @jsonp
 def flyout_entity(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     return suggest.flyout_entity(args)
 
 
@@ -260,38 +256,37 @@ def flyout_entity(args, lang):
 @route('/<lang>/preview', method=['GET','POST'])
 @jsonp
 def preview(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     return suggest.preview(args)
 
 @route('/fetch_values', method=['GET','POST'])
 @jsonp
 def fetch_values(args):
-    if 'lang' not in args:
-        args['lang'] = 'en'
+    args['lang'] = fix_lang(args.get('lang'))
     return reconcile.fetch_values(args)
 
 @route('/<lang>/fetch_values', method=['GET','POST'])
 @jsonp
 def fetch_values(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     return reconcile.fetch_values(args)
 
 @route('/<lang>/propose_properties', method=['GET','POST'])
 @jsonp
 def propose_properties(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     return suggest.propose_properties(args)
 
 @route('/<lang>/fetch_property_by_batch', method=['GET','POST'])
 @jsonp
 def fetch_property_by_batch(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     return reconcile.fetch_property_by_batch(args)
 
 @route('/<lang>/fetch_properties_by_batch', method=['GET','POST'])
 @jsonp
 def fetch_property_by_batch(args, lang):
-    args['lang'] = lang
+    args['lang'] = fix_lang(lang)
     args['extend'] = json.loads(args.get('extend', '{}'))
     return reconcile.fetch_properties_by_batch(args)
 
@@ -311,6 +306,13 @@ def static(fname):
 @route('/monitoring')
 def monitor():
     return {'stats':monitoring.get_rates()}
+
+def fix_lang(lng):
+    if not lng:
+        return 'en'
+    if lng == 'jp':
+        return 'ja'
+    return lng
 
 if __name__ == '__main__':
     run(host='0.0.0.0', port=8000, debug=True)
