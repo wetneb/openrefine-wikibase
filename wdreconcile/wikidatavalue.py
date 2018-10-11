@@ -124,10 +124,10 @@ class ItemValue(WikidataValue):
     @classmethod
     def from_datavalue(self, wd_repr):
         v = wd_repr.get('value')
-        if not v:
-            return ItemValue()
+        if not v or not 'id' in v:
+            return UndefinedValue()
         else:
-            return ItemValue(id=v.get('id'))
+            return ItemValue(id=v['id'])
 
     def match_with_str(self, s, item_store):
         # First check if the target string looks like a Qid
