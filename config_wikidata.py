@@ -65,7 +65,7 @@ headers = {
 
 # Dimensions of the preview
 zoom_ratio = 1.0
-preview_height = 500
+preview_height = 100
 preview_width = 400
 
 # With which should be requested from Commons for the thumbnail
