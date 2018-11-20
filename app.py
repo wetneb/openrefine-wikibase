@@ -3,7 +3,7 @@ import bottle
 import json
 import time
 
-from bottle import route, run, request, default_app, template, HTTPError, abort, HTTPResponse
+from bottle import route, run, request, default_app, template, HTTPError, abort, HTTPResponse, hook, response
 from docopt import docopt
 from wdreconcile.engine import ReconcileEngine
 from wdreconcile.suggest import SuggestEngine
@@ -314,7 +314,15 @@ def fix_lang(lng):
         return 'ja'
     return lng
 
+@hook('after_request')
+def add_cors_headers():
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
+    response.headers['Access-Control-Allow-Origin'] = '*'
+
 if __name__ == '__main__':
     run(host='0.0.0.0', port=8000, debug=True)
 
 app = application = default_app()
+
+
