@@ -28,11 +28,12 @@ def jsonp(view):
         status_code = 200
         try:
             result = view(args, *posargs, **kwargs)
-        except (KeyError) as e:#ValueError, AttributeError, KeyError) as e:
+        except (Exception) as e:#ValueError, AttributeError, KeyError) as e:
             import traceback, sys
             traceback.print_exc(file=sys.stdout)
             result = {'status':'error',
                     'message':'invalid query',
+                    'query': args,
                     'details': str(e)}
             status_code = 403
         if callback:
