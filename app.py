@@ -33,7 +33,6 @@ def jsonp(view):
             traceback.print_exc(file=sys.stdout)
             result = {'status':'error',
                     'message':'invalid query',
-                    'query': args,
                     'details': str(e)}
             status_code = 403
         if callback:
