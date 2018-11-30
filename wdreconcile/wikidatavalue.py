@@ -125,11 +125,15 @@ class ItemValue(WikidataValue):
     def from_datavalue(self, wd_repr):
         v = wd_repr.get('value')
         if not v or not 'id' in v:
-            return UndefinedValue()
+            return ItemValue()
         else:
             return ItemValue(id=v['id'])
 
     def match_with_str(self, s, item_store):
+        # Novalue / somevalue case
+        if 'id' not in self.json:
+            return 0
+
         # First check if the target string looks like a Qid
         qid = to_q(s)
         if qid:
@@ -163,10 +167,13 @@ class ItemValue(WikidataValue):
         return self.json.get('id', '')
 
     def _as_cell(self, lang, item_store):
-        return {
-            'id': self.id,
-            'name': item_store.get_label(self.id, lang),
-        }
+        if 'id' in self.json:
+            return {
+                'id': self.id,
+                'name': item_store.get_label(self.id, lang),
+            }
+        else:
+            return None
 
 @register
 class UrlValue(WikidataValue):

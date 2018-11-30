@@ -97,7 +97,7 @@ class SuggestEngineTest(unittest.TestCase):
             [p['name'] for p in self.propose('Q3918', lang='fr', limit=50)])
 
     def test_flyout(self):
-        self.assertTrue('English writer and humorist' in
+        self.assertTrue('British author and humorist' in
             self.s.flyout({'id':'Q42','lang':'en'})['html'])
 
 
