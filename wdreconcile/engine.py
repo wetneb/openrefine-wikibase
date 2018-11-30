@@ -43,18 +43,25 @@ class ReconcileEngine(object):
             headers=config.headers)
         resp = r.json()
         search_results = [item['title'] for item in resp.get('query', {}).get('search', [])]
-        r = requests.get(
-            config.mediawiki_api_endpoint,
-            {'action':'wbsearchentities',
-            'format':'json',
-            'language': default_language,
-            'limit':num_results,
-            'search':query_string},
-            headers=config.headers)
-        resp = r.json()
-        autocomplete_results = [item['id'] for item in resp.get('search', [])]
 
-        return search_results + autocomplete_results
+        # We do not search with the autocomplete anymore - we used to
+        # search with this in addition to the default search, because
+        # of ranking problems in the Wikidata search interface when
+        # this reconciliation interface was first written.
+
+        #r = requests.get(
+        #    config.mediawiki_api_endpoint,
+        #    {'action':'wbsearchentities',
+        #    'format':'json',
+        #    'language': default_language,
+        #    'limit':num_results,
+        #    'search':query_string},
+        #    headers=config.headers)
+        #resp = r.json()
+        #autocomplete_results = [item['id'] for item in resp.get('search', [])]
+
+        #return search_results + autocomplete_results
+        return search_results
 
     def prepare_property(self, prop):
         """
