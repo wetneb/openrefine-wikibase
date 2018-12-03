@@ -57,6 +57,14 @@ class ReconcileEngineTest(unittest.TestCase):
             self.best_match_id('United States', typ='Q6256'),
             'Q30')
 
+    def test_wikidata_search_does_not_rank_aliases_high_enough(self):
+        """
+        Matches on aliases are not ranked high enough by the default search profile.
+        """
+        self.assertEqual(
+            self.best_match_id('GER', typ='Q6256'),
+            'Q183')
+
     def test_empty(self):
         self.assertEqual(
             self.results(''),
