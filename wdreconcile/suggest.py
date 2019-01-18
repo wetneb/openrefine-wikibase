@@ -161,7 +161,7 @@ class SuggestEngine(object):
         try:
             source_string = match.group(2) if match else s
             parsed = self.ft.parse(source_string)
-            sparql_match = [{'id':source_string,'name':'SPARQL: '+source_string}]
+            sparql_match = [{'id':source_string,'name':'SPARQL: '+source_string, 'description':'property path'}]
         except ValueError:
             pass
 
