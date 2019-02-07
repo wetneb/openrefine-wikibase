@@ -140,7 +140,8 @@ class PropertyFactory(object):
 
         for results in results['bindings']:
             pid = to_p(results['pid']['value'])
-            self.r.sadd(self.unique_ids_key, pid)
+            if pid:
+                self.r.sadd(self.unique_ids_key, pid)
 
         self.r.expire(self.unique_ids_key, self.ttl)
 
