@@ -23,6 +23,11 @@ TODO (Pull requests welcome!)
 
 MIT license.
 
+Configuring for other Wikibase instances than Wikidata
+------------------------------------------------------
+
+This service can be configured to run against another Wikibase instance than Wikidata. The Wikibase instance will need to have an associated SPARQL Query Service, and some properties and items will need to be set up. All the relevant values must be configured in the `config.py` file, and an example of this file for Wikidata is provided in `config_wikidata.py`.
+
 Running with Docker
 -------------------
 
