@@ -19,6 +19,7 @@ from config import image_download_pattern, qid_url_pattern
 from config import mediawiki_api_endpoint, autodescribe_endpoint
 from config import fallback_image_url, fallback_image_alt
 from config import identifier_space, schema_space
+from config import sparql_query_to_propose_properties
 
 def commons_image_url(filename):
     filename = filename.replace(' ', '_')
@@ -206,26 +207,7 @@ class SuggestEngine(object):
         # come first.
 
         property_for_this_type_property
-        sparql_query = Template("""
-        PREFIX wd: <$identifier_space>
-        PREFIX wdt: <$schema_space>
-        PREFIX gas: <http://www.bigdata.com/rdf/gas#>
-        SELECT ?prop ?propLabel ?depth WHERE {
-        SERVICE gas:service {
-            gas:program gas:gasClass "com.bigdata.rdf.graph.analytics.BFS" .
-            gas:program gas:in wd:$base_type .
-            gas:program gas:out ?out .
-            gas:program gas:out1 ?depth .
-            gas:program gas:maxIterations 10 .
-            gas:program gas:maxVisited 100 .
-            gas:program gas:linkType wdt:P279 .
-        }
-        SERVICE wikibase:label { bd:serviceParam wikibase:language "$lang" }
-        ?out wdt:$property_for_this_type ?prop .
-        }
-        ORDER BY ?depth
-        LIMIT $limit
-        """)
+        sparql_query = Template(sparql_query_to_propose_properties)
         sparql_query = sparql_query.substitute(
             base_type=reconciled_type,
             property_for_this_type=property_for_this_type_property,
