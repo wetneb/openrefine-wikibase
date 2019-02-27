@@ -8,6 +8,10 @@ should be used
 # Endpoint of the MediaWiki API of the Wikibase instance
 mediawiki_api_endpoint = 'https://www.wikidata.org/w/api.php'
 
+# SPARQL endpoint
+wikibase_sparql_endpoint = 'https://query.wikidata.org/sparql'
+
+
 # Regexes and group ids to extracts Qids and Pids from URLs
 import re
 q_re = re.compile(r'(<?https?://www.wikidata.org/(entity|wiki)/)?(Q[0-9]+)>?')
@@ -33,6 +37,7 @@ qid_url_pattern = 'https://www.wikidata.org/wiki/{{id}}'
 # Set to None to disable this filter
 avoid_items_of_class = 'Q17442446'
 
+
 # Service name exposed at various places,
 # mainly in the list of reconciliation services of users
 service_name = 'DEV Wikidata'
@@ -54,7 +59,7 @@ import redis
 redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 # Redis prefix to use in front of all keys
-redis_key_prefix = 'openrefine-wikidata:'
+redis_key_prefix = 'openrefine_wikidata:'
 
 # Headers for the HTTP requests made by the tool
 headers = {
@@ -111,8 +116,41 @@ autodescribe_endpoint = 'https://tools.wmflabs.org/autodesc/'
 # Default type : entity (Q35120)
 default_type_entity = 'Q35120'
 
+# Property path used to obtain the type of an item
+type_property_path = 'P31'
+
 # Property to follow to fetch properties for a given type
 property_for_this_type_property = 'P1963'
 
-# Type expected as target of a given property
-subject_item_of_this_property_pid = 'P1629'
+# Optional prefix in front of properties in SPARQL-like property paths
+wdt_prefix = 'wdt:'
+
+# Sparql query used to fetch all the subclasses of a given item.
+# The '$qid' string will be replaced by the qid whose children should be fetched.
+sparql_query_to_fetch_subclasses = """
+SELECT ?child WHERE { ?child wdt:P279* wd:$qid }
+"""
+
+# Sparql query used to fetch all the properties which store unique identifiers
+sparql_query_to_fetch_unique_id_properties = """
+SELECT ?pid WHERE { ?pid wdt:P31/wdt:P279* wd:Q19847637 }
+"""
+
+# Sparql query used to propose properties to fetch for items of a given class
+sparql_query_to_propose_properties = """
+SELECT ?prop ?propLabel ?depth WHERE {
+SERVICE gas:service {
+    gas:program gas:gasClass "com.bigdata.rdf.graph.analytics.BFS" .
+    gas:program gas:in wd:$base_type .
+    gas:program gas:out ?out .
+    gas:program gas:out1 ?depth .
+    gas:program gas:maxIterations 10 .
+    gas:program gas:maxVisited 100 .
+    gas:program gas:linkType wdt:P279 .
+}
+SERVICE wikibase:label { bd:serviceParam wikibase:language "$lang" }
+?out wdt:$property_for_this_type ?prop .
+}
+ORDER BY ?depth
+LIMIT $limit
+"""

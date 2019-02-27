@@ -1,5 +1,7 @@
 from .utils import to_q
 from .sparqlwikidata import sparql_wikidata
+import config
+from string import Template
 
 class TypeMatcher(object):
     """
@@ -9,7 +11,7 @@ class TypeMatcher(object):
 
     def __init__(self, redis_client):
         self.r = redis_client
-        self.prefix = 'openrefine_wikidata:children'
+        self.prefix = config.redis_key_prefix+':children'
         self.ttl = 24*60*60 # 1 day
 
     def is_subclass(self, qid_1, qid_2):
@@ -36,11 +38,7 @@ class TypeMatcher(object):
         if self.r.exists(key_name):
             return # children are already prefetched
 
-        sparql_query = """
-        PREFIX wd: <http://www.wikidata.org/entity/>
-        PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-        SELECT ?child WHERE { ?child wdt:P279* wd:%s }
-        """ % qid
+        sparql_query = Template(config.sparql_query_to_fetch_subclasses).substitute(qid=qid)
         results = sparql_wikidata(sparql_query)
 
         for result in results["bindings"]:

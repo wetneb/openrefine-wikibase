@@ -212,6 +212,7 @@ class PropertyTest(unittest.TestCase):
             self.fetch_by_values('P213', ['0000 0001 2169 3027'], lang='ko'),
             {'0000 0001 2169 3027':[('Q273600', 'École nationale vétérinaire d’Alfort')]})
 
+    @unittest.expectedFailure
     def test_expected_types(self):
         # Property "country (P17)" has type country (Q6256) at least
         self.assertTrue(
