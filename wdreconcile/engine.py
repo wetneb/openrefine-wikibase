@@ -13,6 +13,7 @@ from .propertypath import PropertyFactory
 from .wikidatavalue import ItemValue
 from .sitelink import SitelinkFetcher
 from config import type_property_path
+from config import default_type_entity
 
 class ReconcileEngine(object):
     """
@@ -181,6 +182,8 @@ class ReconcileEngine(object):
             raise ValueError('Invalid type_strict')
         if type(target_types) != list:
             target_types = [target_types]
+        # Remove the default type from the list
+        target_types = [ t for t in target_types if t != default_type_entity ]
 
         discounted_validation_threshold = (config.validation_threshold -
             self.validation_threshold_discount_per_property * len(properties))
