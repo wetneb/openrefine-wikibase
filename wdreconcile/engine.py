@@ -12,6 +12,7 @@ from .language import language_fallback
 from .propertypath import PropertyFactory
 from .wikidatavalue import ItemValue
 from .sitelink import SitelinkFetcher
+from config import type_property_path
 
 class ReconcileEngine(object):
     """
@@ -26,7 +27,7 @@ class ReconcileEngine(object):
         self.validation_threshold_discount_per_property = 5
         self.match_score_gap = 10
         self.avoid_type = config.avoid_items_of_class
-        self.p31_property_path = self.pf.parse('P31')
+        self.p31_property_path = self.pf.parse(type_property_path)
 
     def wikidata_string_search(self, query_string, num_results, default_language):
         """

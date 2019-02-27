@@ -14,7 +14,9 @@ from .utils import to_q
 from .sparqlwikidata import sparql_wikidata
 from .subfields import subfield_factory
 from .wikidatavalue import WikidataValue, ItemValue, IdentifierValue
-from config import subject_item_of_this_property_pid
+from config import wdt_prefix
+from config import redis_key_prefix
+from config import sparql_query_to_fetch_unique_id_properties
 from .language import language_fallback
 
 property_lexer_specs = [
@@ -43,7 +45,7 @@ class PropertyFactory(object):
     def __init__(self, item_store):
         self.item_store = item_store
         self.r = self.item_store.r # redis client
-        self.unique_ids_key = 'openrefine_wikidata:unique_ids'
+        self.unique_ids_key = redis_key_prefix+'unique_ids'
         self.ttl = 4*24*60*60 # 4 days
 
         self.parser = forward_decl()
@@ -131,12 +133,7 @@ class PropertyFactory(object):
         # identifier"
         # https://www.wikidata.org/wiki/Q19847637
 
-        sparql_query = """
-        PREFIX wd: <http://www.wikidata.org/entity/>
-        PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-        SELECT ?pid WHERE { ?pid wdt:P31/wdt:P279* wd:Q19847637 }
-        """
-        results = sparql_wikidata(sparql_query)
+        results = sparql_wikidata(sparql_query_to_fetch_unique_id_properties)
 
         for results in results['bindings']:
             pid = to_p(results['pid']['value'])
@@ -265,9 +262,6 @@ class PropertyPath(object):
                           for v in values )
         limit = 4*len(values)
         sparql_query = """
-        PREFIX wd: <http://www.wikidata.org/entity/>
-        PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         SELECT ?qid ?value
         (SAMPLE(COALESCE(?best_label, ?fallback_label)) as ?label)
         WHERE {
@@ -370,7 +364,7 @@ class LeafProperty(PropertyPath):
             yield v
 
     def __str__(self, add_prefix=False):
-        prefix = 'wdt:' if add_prefix else ''
+        prefix = wdt_prefix if add_prefix else ''
         return prefix+self.pid
 
     def uniform_depth(self):
@@ -380,13 +374,10 @@ class LeafProperty(PropertyPath):
 
     def expected_types(self):
         """
-        Retrieve the expected type from Wikidata
+        Retrieve the expected type from Wikibase
         """
-        property_item = self.get_item(ItemValue(id=self.pid))
-        if property_item.get('datatype') != 'wikibase-item':
-            return []
-        vals = property_item.get(subject_item_of_this_property_pid, [])
-        return [WikidataValue.from_datavalue(v['mainsnak']).id for v in vals]
+        # TODO
+        return []
 
     def readable_name(self, lang):
         return self.item_store.get_label(self.pid, lang)
