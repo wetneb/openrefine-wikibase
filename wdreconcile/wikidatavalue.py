@@ -424,7 +424,22 @@ class TimeValue(WikidataValue):
         # TODO convert to a timestamp
         # TODO compute difference
         # TODO convert to a ratio based on the precision
-        return 0
+        if not self.parsed:
+            return 0
+        try:
+            date_parts = [int(part) for part in s.split('-')]
+        except ValueError:
+            return 0
+        if len(date_parts) > 3:
+            return 0
+
+        common_date_parts = list(zip(date_parts, [self.parsed.year, self.parsed.month, self.parsed.day]))
+        if self.precision == 10:
+            common_date_parts = common_date_parts[:2]
+        elif self.precision == 9:
+            common_date_parts = common_date_parts[:1]
+
+        return 100 if all(x == y for x, y in common_date_parts) else 0
 
     def as_string(self):
         return str(self.json.get('time', ''))
