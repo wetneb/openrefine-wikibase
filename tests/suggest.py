@@ -82,6 +82,9 @@ class SuggestEngineTest(unittest.TestCase):
         self.assertTrue('ville' in
             self.preview(id='Q350',lang='fr'))
 
+    def test_single_letter(self):
+        self.assertTrue('È' in self.preview(id='Q10008', lang='en'))
+
     def test_propose_property(self):
         # We follow wdt:P279 to find properties higher up:
         # number of students (P2196) is marked on "institutional
