@@ -376,7 +376,7 @@ class MonolingualValue(WikidataValue):
 
     @classmethod
     def from_datavalue(cls, wd_repr):
-        return cls(**wd_repr)
+        return cls(**(wd_repr.get('value') or {}))
 
     def match_with_str(self, s, item_store):
         ref_val = self.json.get('text')
