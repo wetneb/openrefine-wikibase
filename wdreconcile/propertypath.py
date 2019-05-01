@@ -27,6 +27,7 @@ property_lexer_specs = [
     ('PIPE', (r'\|',)),
     ('LBRA', (r'\(',)),
     ('RBRA', (r'\)',)),
+    ('UNDER', (r'_',)),
     ('AT', (r'@',)),
     ('SUBFIELD', (r'[a-z]+',)),
 ]
@@ -56,6 +57,7 @@ class PropertyFactory(object):
         pipe_path = forward_decl()
 
         atomic.define(
+            (t('PID') + st('UNDER') + t('PID') >> self.make_qualifier) |
             (t('PID') >> self.make_leaf) |
             (t('TERM') >> self.make_term) |
             (t('DOT') >> self.make_empty) |
@@ -91,6 +93,9 @@ class PropertyFactory(object):
 
     def make_leaf(self, pid):
         return LeafProperty(self, pid.value)
+
+    def make_qualifier(self, pids):
+        return QualifierProperty(self, pids[0].value, pids[1].value)
 
     def make_term(self, term):
         return TermPath(self, term.value[0], term.value[1:])
@@ -329,6 +334,55 @@ class EmptyPropertyPath(PropertyPath):
 
     def expected_types(self):
         return []
+
+class QualifierProperty(PropertyPath):
+    """
+    Fetches the value of a qualifier of a given claim, like "P31_P642".
+    """
+    def __init__(self, factory, pid_property, pid_qualifier):
+        super(QualifierProperty, self).__init__(factory)
+        self.property_pid = pid_property
+        self.qualifier_pid = pid_qualifier
+
+    def step(self, v, referenced='any', rank='any'):
+        if v.value_type != 'wikibase-item':
+            return []
+        item = self.get_item(v)
+        datavalues = []
+        claims = item.get(self.property_pid, [])
+
+        if rank == 'best':
+            ranks = [claim['rank'] for claim in claims]
+            best_rank = max(ranks) if ranks else 'deprecated'
+            rank = best_rank
+
+        for claim in claims:
+            if claim['rank'] < rank:
+                continue
+            references = claim.get('references', [])
+            if referenced == 'internal' and not references:
+                continue
+            for qualifier in (claim.get('qualifiers') or {}).get(self.qualifier_pid) or []:
+                v = WikidataValue.from_datavalue(qualifier)
+                yield v
+
+    def __str__(self, add_prefix=False):
+        prefix = wdt_prefix if add_prefix else ''
+        return prefix+self.property_pid+'_'+self.qualifier_pid
+
+    def uniform_depth(self):
+        raise ValueError('One property is not an identifier')
+
+    def expected_types(self):
+        """
+        Retrieve the expected type from Wikibase
+        """
+        # TODO
+        return []
+
+    def readable_name(self, lang):
+        return self.item_store.get_label(self.property_pid, lang)+', '+self.item_store.get_label(self.qualifier_pid, lang)
+
 
 class LeafProperty(PropertyPath):
     """

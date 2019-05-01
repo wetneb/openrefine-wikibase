@@ -36,7 +36,8 @@ class PropertyTest(unittest.TestCase):
             'P14/(P131/P17|P17)',
             'P131/(P17|.)',
             'P17/Len',
-            '(Len|Afi)'
+            '(Len|Afi)',
+            'P4424_P518',
         ]
         for sample in samples:
             self.assertEqual(str(self.f.parse(sample)), sample)
@@ -87,6 +88,11 @@ class PropertyTest(unittest.TestCase):
             self.resolve('P17', 'Q83259'),
             [ItemValue(id='Q142')]
         )
+
+        # Qualifier
+        self.assertEqual(
+           self.resolve('P4424_P518', 'Q42023001'),
+           [ItemValue(id='Q2106255')])
 
         # With dot
         self.assertEqual(
