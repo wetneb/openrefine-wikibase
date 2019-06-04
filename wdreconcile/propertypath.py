@@ -47,7 +47,7 @@ class PropertyFactory(object):
         self.item_store = item_store
         self.r = self.item_store.r # redis client
         self.unique_ids_key = redis_key_prefix+'unique_ids'
-        self.ttl = 4*24*60*60 # 4 days
+        self.ttl = 1*24*60*60 # 1 day
 
         self.parser = forward_decl()
 
