@@ -292,7 +292,7 @@ class PropertyPath(object):
 
         for results in results['bindings']:
             qid = to_q(results['qid']['value'])
-            label = results['label'].get('value') or qid
+            label = (results.get('label') or {}).get('value') or qid
             primary_id = results['value']['value']
             value_to_qid[primary_id].append((qid,label))
 
