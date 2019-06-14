@@ -11,6 +11,8 @@ mediawiki_api_endpoint = 'https://www.wikidata.org/w/api.php'
 # SPARQL endpoint
 wikibase_sparql_endpoint = 'https://query.wikidata.org/sparql'
 
+# User agent to connect to the Wikidata APIs
+user_agent = 'OpenRefine-Wikidata reconciliation interface'
 
 # Regexes and group ids to extracts Qids and Pids from URLs
 import re

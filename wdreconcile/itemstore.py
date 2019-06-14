@@ -2,7 +2,7 @@ import requests
 import json
 from .language import language_fallback
 from .sitelink import SitelinkFetcher
-from config import redis_key_prefix, mediawiki_api_endpoint
+from config import redis_key_prefix, mediawiki_api_endpoint, user_agent
 
 class ItemStore(object):
     """
@@ -94,7 +94,8 @@ class ItemStore(object):
             {'action':'wbgetentities',
             'format':'json',
             'props':'aliases|labels|descriptions|claims',
-            'ids':'|'.join(first_batch)})
+            'ids':'|'.join(first_batch)},
+            headers={'User-Agent':user_agent})
         r.raise_for_status()
         resp = r.json()
 
