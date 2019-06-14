@@ -80,8 +80,8 @@ class PropertyTest(unittest.TestCase):
 
         self.assertEqual(
             self.resolve('P1449', 'Q1249148'),
-    [MonolingualValue(text='Dick',language='en'),
-    MonolingualValue(text='Rick',language='en'),
+    [
+    MonolingualValue(text='Dick',language='en'),
    MonolingualValue(text='Rich',language='en')])
 
         self.assertEqual(
