@@ -155,7 +155,7 @@ class SitelinkFetcher(object):
     def resolve_redirects_for_titles(cls, lang_code, wiki, titles):
         """
         >>> SitelinkFetcher.resolve_redirects_for_titles('en','wikipedia', ['Knuth-Bendix','Lowendal', 'Paris'])
-        ['Knuth–Bendix completion algorithm', 'Ulrich Frédéric Woldemar, Comte de Lowendal', 'Paris']
+        ['Knuth–Bendix completion algorithm', 'Ulrich Friedrich Woldemar von Löwendal', 'Paris']
         """
         try:
             r = requests.get('https://{}.{}.org/w/api.php'.format(lang_code, wiki),
