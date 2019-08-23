@@ -74,6 +74,11 @@ class SuggestEngineTest(unittest.TestCase):
             self.best_match_id('property', 'SPARQL: P17/P297'),
             'P17/P297')
 
+    def test_qid_property(self):
+        self.assertEqual(
+            self.best_match_id('property', 'qid'),
+            'qid')
+
     def test_description(self):
         results = self.results('entity', 'Jacob Collier')
         self.assertTrue(len(results[0]['description']) > 0)
