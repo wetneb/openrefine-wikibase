@@ -74,6 +74,11 @@ class SuggestEngineTest(unittest.TestCase):
             self.best_match_id('property', 'SPARQL: P17/P297'),
             'P17/P297')
 
+    def test_sparql_not_first_for_pid(self):
+        results = self.results('property', 'P17', lang='en')
+        print(results)
+        self.assertEqual(results[0]['name'], 'country')
+
     def test_qid_property(self):
         self.assertEqual(
             self.best_match_id('property', 'qid'),

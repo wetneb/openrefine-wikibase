@@ -60,6 +60,7 @@ class SuggestEngine(object):
     def __init__(self, redis_client):
         self.r = redis_client
         self.property_path_re = re.compile(r'(SPARQL ?:? ?)?(\(*(P\d+|[LAD][a-z\-]+)[/\|@].*)$')
+        self.pid_re = re.compile('^P[1-9][0-9]*$')
         self.store = ItemStore(self.r)
         self.ft = PropertyFactory(self.store)
         self.store.ttl = 24*60*60 # one day
@@ -162,7 +163,8 @@ class SuggestEngine(object):
         try:
             source_string = match.group(2) if match else s
             parsed = self.ft.parse(source_string)
-            sparql_match = [{'id':source_string,'name':'SPARQL: '+source_string, 'description':'property path'}]
+            if not self.pid_re.match(s):
+                sparql_match = [{'id':source_string,'name':'SPARQL: '+source_string, 'description':'property path'}]
         except ValueError:
             pass
 
