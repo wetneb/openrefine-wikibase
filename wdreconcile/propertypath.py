@@ -23,6 +23,7 @@ property_lexer_specs = [
     ('DOT', (r'\.',)),
     ('PID', (r'P\d+',)),
     ('TERM', (r'[LDA][a-z\-]+',)),
+    ('QID', (r'qid',)),
     ('SLASH', (r'/',)),
     ('PIPE', (r'\|',)),
     ('LBRA', (r'\(',)),
@@ -59,6 +60,7 @@ class PropertyFactory(object):
         atomic.define(
             (t('PID') + st('UNDER') + t('PID') >> self.make_qualifier) |
             (t('PID') >> self.make_leaf) |
+            (t('QID') >> self.make_qid) |
             (t('TERM') >> self.make_term) |
             (t('DOT') >> self.make_empty) |
             (st('LBRA') + pipe_path + st('RBRA'))
@@ -94,6 +96,9 @@ class PropertyFactory(object):
     def make_leaf(self, pid):
         return LeafProperty(self, pid.value)
 
+    def make_qid(self, node):
+        return QidProperty(self)
+
     def make_qualifier(self, pids):
         return QualifierProperty(self, pids[0].value, pids[1].value)
 
@@ -117,7 +122,7 @@ class PropertyFactory(object):
             tokens = list(tokenize_property(property_path_string))
             return self.parser.parse(tokens)
         except (LexerError, NoParseError) as e:
-            raise ValueError(str(e))
+            raise ValueError("Could not parse '{}': {}".format(property_path_string, str(e)))
 
     def is_identifier_pid(self, pid):
         """
@@ -435,6 +440,31 @@ class LeafProperty(PropertyPath):
 
     def readable_name(self, lang):
         return self.item_store.get_label(self.pid, lang)
+
+class QidProperty(PropertyPath):
+    """
+    A node to extract the Qid of an item.
+    """
+    def __init__(self, factory):
+        super(QidProperty, self).__init__(factory)
+
+    def step(self, v, referenced='any', rank='any'):
+        if v.value_type != 'wikibase-item':
+            return []
+        return [IdentifierValue(id=v.id)]
+
+    def __str__(self, add_prefix=False):
+        return 'qid'
+
+    def uniform_depth(self):
+        return 1
+
+    def expected_type(self):
+        return []
+
+    def readable_name(self, lang):
+        # We could potentially look up some 'Qid' item to get translations here…
+        return 'Qid'
 
 class TermPath(PropertyPath):
     """

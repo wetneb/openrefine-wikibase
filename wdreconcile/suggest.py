@@ -227,6 +227,11 @@ class SuggestEngine(object):
                 'name': name,
                 'id': pid,
             })
+        if not properties:
+            properties.append({
+                'name': 'Qid',
+                'id': 'qid'
+            })
 
         return {
             'type':reconciled_type,
