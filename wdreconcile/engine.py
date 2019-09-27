@@ -30,7 +30,7 @@ class ReconcileEngine(object):
         self.avoid_type = config.avoid_items_of_class
         self.p31_property_path = self.pf.parse(type_property_path)
 
-    def wikidata_string_search(self, query_string, num_results, default_language):
+    def wikibase_string_search(self, query_string, num_results, default_language):
         """
         Use the Wikidata API to search for matching items
         """
@@ -39,12 +39,14 @@ class ReconcileEngine(object):
             {'action':'query',
             'format':'json',
             'list':'search',
-            'srnamespace':0,
+            'srnamespace':config.wikibase_namespace_id,
             'srlimit':num_results,
-            'srsearch':query_string},
+            'srsearch':query_string,
+            'srwhat':'text'},
             headers=config.headers)
-        resp = r.json()
-        search_results = [item['title'] for item in resp.get('query', {}).get('search', [])]
+        resp = r.json()        
+        # NOTE: remove the wikibase namespace prefix to only get the QID
+        search_results = [item['title'].split(config.wikibase_namespace_prefix,1)[1] for item in resp.get('query', {}).get('search', [])]
         r = requests.get(
             config.mediawiki_api_endpoint,
             {'action':'wbsearchentities',
@@ -151,7 +153,7 @@ class ReconcileEngine(object):
             elif qid_from_sitelink:
                 qids[query_id] = [qid_from_sitelink]
             else: # otherwise just search for the string with the WD API
-                qids[query_id] = self.wikidata_string_search(query['query'],
+                qids[query_id] = self.wikibase_string_search(query['query'],
                                     num_results_before_filter, default_language)
 
             qids_to_prefetch |= set(qids[query_id])
@@ -308,8 +310,9 @@ class ReconcileEngine(object):
 
         # sorting by inverse qid size for issue #26
         # we might want to replace that by something smarter like PageRank, but
-        # this is very cheap to compute
-        ranked_items = sorted(scored_items, key=lambda i: (-int(i.get('score', 0)), int(i['id'][1:])))
+        # this is very cheap to compute 
+        # NOTE: remove the "Q" character explicitely (the previous method was not bullet-proof since there could be items with ID "Item:Qxxx" for instance)
+        ranked_items = sorted(scored_items, key=lambda i: (-int(i.get('score', 0)), int(i['id'].split('Q',1)[1])))
 
         if ranked_items:
             # Decide if we trust the first match

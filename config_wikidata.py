@@ -11,6 +11,12 @@ mediawiki_api_endpoint = 'https://www.wikidata.org/w/api.php'
 # SPARQL endpoint
 wikibase_sparql_endpoint = 'https://query.wikidata.org/sparql'
 
+# Wikibase namespace ID, used to search for items (default is 120, which is the default Wikibase 'Item:' namespace)
+wikibase_namespace_id = 120
+
+# Namespace prefix of Wikibase items (including colon, e.g. 'Item:')
+wikibase_namespace_prefix = ''
+
 # User agent to connect to the Wikidata APIs
 user_agent = 'OpenRefine-Wikidata reconciliation interface'
 
