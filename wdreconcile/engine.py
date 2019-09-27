@@ -44,9 +44,9 @@ class ReconcileEngine(object):
             'srsearch':query_string,
             'srwhat':'text'},
             headers=config.headers)
-        resp = r.json()        
+        resp = r.json()
         # NOTE: remove the wikibase namespace prefix to only get the QID
-        search_results = [item['title'].split(config.wikibase_namespace_prefix,1)[1] for item in resp.get('query', {}).get('search', [])]
+        search_results = [item['title'][len(config.wikibase_namespace_prefix):] for item in resp.get('query', {}).get('search', [])]
         r = requests.get(
             config.mediawiki_api_endpoint,
             {'action':'wbsearchentities',
@@ -310,7 +310,7 @@ class ReconcileEngine(object):
 
         # sorting by inverse qid size for issue #26
         # we might want to replace that by something smarter like PageRank, but
-        # this is very cheap to compute 
+        # this is very cheap to compute
         # NOTE: remove the "Q" character explicitely (the previous method was not bullet-proof since there could be items with ID "Item:Qxxx" for instance)
         ranked_items = sorted(scored_items, key=lambda i: (-int(i.get('score', 0)), int(i['id'].split('Q',1)[1])))
 
