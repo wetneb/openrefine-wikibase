@@ -11,8 +11,10 @@ mediawiki_api_endpoint = 'https://www.wikidata.org/w/api.php'
 # SPARQL endpoint
 wikibase_sparql_endpoint = 'https://query.wikidata.org/sparql'
 
-# Wikibase namespace ID, used to search for items (default is 120, which is the default Wikibase 'Item:' namespace)
-wikibase_namespace_id = 120
+# Wikibase namespace ID, used to search for items
+# For Wikidata this is 0, but most by default Wikibase uses 120, which is the default Wikibase 'Item:' namespace
+# CHANGE THIS TO 120 if you are adapting this configuration file to another Wikibase
+wikibase_namespace_id = 0
 
 # Namespace prefix of Wikibase items (including colon, e.g. 'Item:')
 wikibase_namespace_prefix = ''
