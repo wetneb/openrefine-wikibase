@@ -408,7 +408,10 @@ class TimeValue(WikidataValue):
 
     def __init__(self, **values):
         super(TimeValue, self).__init__(**values)
-        time = self.time
+        if 'time' not in self.json:
+            time = ''
+        else:
+            time = self.time
         if time.startswith('+'):
             time = time[1:]
         try:
