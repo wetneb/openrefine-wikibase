@@ -36,6 +36,7 @@ class PropertyTest(unittest.TestCase):
             'P14/(P131/P17|P17)',
             'P131/(P17|.)',
             'P17/Len',
+            'P17/Sfrwiki',
             '(Len|Afi)',
             'P4424_P518',
             'P17/qid',
@@ -84,7 +85,11 @@ class PropertyTest(unittest.TestCase):
             self.resolve('P1449', 'Q1249148'),
     [
     MonolingualValue(text='Dick',language='en'),
-   MonolingualValue(text='Rich',language='en')])
+    MonolingualValue(text='Rich',language='en'),
+    MonolingualValue(text='Rik',language='en'),
+    MonolingualValue(text='Richey',language='en'),
+    MonolingualValue(text='Rick',language='en'),
+    MonolingualValue(text='Ritchie',language='en')])
 
         self.assertEqual(
             self.resolve('P17', 'Q83259'),
@@ -131,6 +136,12 @@ class PropertyTest(unittest.TestCase):
         # With term
         self.assertEqual(
             self.resolve('P17/Lfr', 'Q83259'),
+            [IdentifierValue(value='France')]
+        )
+
+        # With sitelink
+        self.assertEqual(
+            self.resolve('P17/Sfrwiki', 'Q83259'),
             [IdentifierValue(value='France')]
         )
 

@@ -93,7 +93,7 @@ class ItemStore(object):
         r = requests.get(mediawiki_api_endpoint,
             {'action':'wbgetentities',
             'format':'json',
-            'props':'aliases|labels|descriptions|claims',
+            'props':'aliases|labels|descriptions|claims|sitelinks',
             'ids':'|'.join(first_batch)},
             headers={'User-Agent':user_agent})
         r.raise_for_status()
@@ -151,6 +151,12 @@ class ItemStore(object):
 
         # Add datatype for properties
         simplified['datatype'] = item.get('datatype')
+
+        # Add sitelinks
+        simplified['sitelinks'] = {
+            key : obj.get('title')
+            for key, obj in (item.get('sitelinks') or {}).items()
+        }
 
         return simplified
 

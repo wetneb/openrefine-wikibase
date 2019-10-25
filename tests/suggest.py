@@ -76,7 +76,6 @@ class SuggestEngineTest(unittest.TestCase):
 
     def test_sparql_not_first_for_pid(self):
         results = self.results('property', 'P17', lang='en')
-        print(results)
         self.assertEqual(results[0]['name'], 'country')
 
     def test_qid_property(self):
@@ -110,7 +109,7 @@ class SuggestEngineTest(unittest.TestCase):
             [p['name'] for p in self.propose('Q3918', lang='fr', limit=50)])
 
     def test_flyout(self):
-        self.assertTrue('British author and humorist' in
+        self.assertTrue('humorist' in
             self.s.flyout({'id':'Q42','lang':'en'})['html'])
 
 

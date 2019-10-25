@@ -23,6 +23,7 @@ property_lexer_specs = [
     ('DOT', (r'\.',)),
     ('PID', (r'P\d+',)),
     ('TERM', (r'[LDA][a-z\-]+',)),
+    ('SITELINK', (r'S[a-z\-]+',)),
     ('QID', (r'qid',)),
     ('SLASH', (r'/',)),
     ('PIPE', (r'\|',)),
@@ -62,6 +63,7 @@ class PropertyFactory(object):
             (t('PID') >> self.make_leaf) |
             (t('QID') >> self.make_qid) |
             (t('TERM') >> self.make_term) |
+            (t('SITELINK') >> self.make_sitelink) |
             (t('DOT') >> self.make_empty) |
             (st('LBRA') + pipe_path + st('RBRA'))
         )
@@ -104,6 +106,9 @@ class PropertyFactory(object):
 
     def make_term(self, term):
         return TermPath(self, term.value[0], term.value[1:])
+
+    def make_sitelink(self, sitelink):
+        return SitelinkPath(self, sitelink.value[1:])
 
     def make_slash(self, lst):
         return ConcatenatedPropertyPath(self, lst[0], lst[1])
@@ -508,6 +513,38 @@ class TermPath(PropertyPath):
     def readable_name(self, lang):
         return self.term_type + self.lang
 
+class SitelinkPath(PropertyPath):
+    """
+    A node for accessing the sitelinks of an item
+    """
+
+    def __init__(self, factory, site):
+        super(SitelinkPath, self).__init__(factory)
+        self.site = site
+
+    def step(self, v, referenced='any', rank='any'):
+        if v.value_type != 'wikibase-item':
+            return []
+        item = self.get_item(v)
+
+        if not item:
+            return []
+        sitelink = (item.get('sitelinks') or {}).get(self.site)
+        if sitelink:
+            return [IdentifierValue(value=sitelink)]
+        return []
+
+    def __str__(self, add_prefix=False):
+        return 'S'+self.site
+
+    def uniform_depth(self):
+        raise ValueError('One property is not an identifier')
+
+    def expected_types(self):
+        return []
+
+    def readable_name(self, lang):
+        return 'Sitelink ' + self.site
 
 class ConcatenatedPropertyPath(PropertyPath):
     """
