@@ -1,0 +1,10 @@
+version: '3'
+services:
+  reconcile:
+    build: .
+    ports:
+      - "8000:8000"
+  redis:
+    image: "redis:alpine"
+    expose:
+      - "6379" 
