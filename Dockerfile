@@ -1,15 +1,15 @@
-FROM debian:stable
-ENV LANG C.UTF-8
-
-ADD . /openrefine-wikibase
+FROM python:3.7-alpine
 
 WORKDIR /openrefine-wikibase
 
-RUN apt-get update && apt-get install -qq python3 python3-pip redis-server
-RUN pip3 install -r requirements.txt
-RUN cp config_wikidata.py config.py
+RUN apk add --no-cache gcc musl-dev linux-headers
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
 
+ADD . /openrefine-wikibase
+RUN cp config_docker.py config.py
+RUN pwd
+RUN ls
 
 EXPOSE 8000
-CMD [ "./entrypoint_docker.sh" ]
-
+CMD [ "python", "app.py" ]
