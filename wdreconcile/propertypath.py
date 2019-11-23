@@ -235,7 +235,7 @@ class PropertyPath(object):
         :param rank: the ranks of the statements to consider: 'any', 'best',
            or 'no_deprecated'
         """
-        raise NotImplemented
+        raise NotImplementedError()
 
     def is_unique_identifier(self):
         """
@@ -262,7 +262,7 @@ class PropertyPath(object):
         If any of these properties is not satisfied, ValueError is
         raised.
         """
-        raise NotImplemented
+        raise NotImplementedError()
 
     def fetch_qids_by_values(self, values, lang):
         """
@@ -313,7 +313,7 @@ class PropertyPath(object):
         Returns a list of possible types expected
         as values of this property.
         """
-        raise NotImplemented
+        return []
 
     def readable_name(self, lang):
         """
@@ -456,7 +456,7 @@ class QidProperty(PropertyPath):
     def step(self, v, referenced='any', rank='any'):
         if v.value_type != 'wikibase-item':
             return []
-        return [IdentifierValue(id=v.id)]
+        return [IdentifierValue(value=v.id)]
 
     def __str__(self, add_prefix=False):
         return 'qid'
