@@ -98,11 +98,11 @@ class PropertyTest(unittest.TestCase):
 
         self.assertEqual(
             self.resolve('P17/qid', 'Q83259'),
-            [IdentifierValue(id='Q142')])
+            [IdentifierValue(value='Q142')])
 
         self.assertEqual(
             self.resolve('qid', 'Q142'),
-            [IdentifierValue(id='Q142')])
+            [IdentifierValue(value='Q142')])
 
         # Qualifier
         self.assertEqual(
