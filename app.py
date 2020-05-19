@@ -120,7 +120,7 @@ def api(args):
             'defaultTypes': [
                 {
                     'id': default_type_entity,
-                    'name': reconcile.item_store.get_label('Q35120', lang)
+                    'name': reconcile.item_store.get_label(default_type_entity, lang)
                 }
             ],
             'extend' : {
