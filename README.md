@@ -42,6 +42,10 @@ Before running `docker-compose up` you can configure the service to point to you
 
 On Windows you will need to accept the Windows Firewall popup to expose the port 8000 where the service runs.
 
+You can then access the landing page of your new reconciliation service at `http://localhost:8000/`.
+
+To use it in OpenRefine, you can add the reconciliation service (in the "Start reconciling" dialog) with the address "http://localhost:8000/en/api". You can then use this reconciliation service to match data to items stored in your Wikibase instance.
+
 Running manually
 ----------------
 
