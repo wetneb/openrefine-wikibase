@@ -31,14 +31,19 @@ This service can be configured to run against another Wikibase instance than Wik
 Running with Docker
 -------------------
 
-You can run this service with docker:
+You can run this service with docker. First, clone the repository and go to its root directory:
+
 ```
 git clone https://github.com/wetneb/openrefine-wikibase
 cd openrefine-wikibase
-docker-compose up
 ```
 
-Before running `docker-compose up` you can configure the service to point to your own Wikibase instance by modifying the `config_docker.py` file.
+Then, copy the sample `config_docker.py` to `config.py` and modify the copy to point to the Wikibase instance of your choice.
+
+Finally, start the service:
+```
+docker-compose up
+```
 
 On Windows you will need to accept the Windows Firewall popup to expose the port 8000 where the service runs.
 
