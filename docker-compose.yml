@@ -1,9 +1,14 @@
-version: '3'
+version: '3.2'
 services:
   reconcile:
     build: .
     ports:
       - "8000:8000"
+    volumes:
+      - type: bind
+        source: ./config_docker.py
+        target: /openrefine-wikibase/config.py
+        read_only: true
   redis:
     image: "redis:alpine"
     expose:
