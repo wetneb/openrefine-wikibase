@@ -3,7 +3,7 @@ Wikibase reconciliation interface for OpenRefine
 [![Build Status](https://travis-ci.org/wetneb/openrefine-wikibase.svg?branch=master)](https://travis-ci.org/wetneb/openrefine-wikibase) [![Coverage Status](https://coveralls.io/repos/github/wetneb/openrefine-wikidata/badge.svg?branch=master)](https://coveralls.io/github/wetneb/openrefine-wikidata?branch=master)
 
 An instance of this endpoint for Wikidata can be found at:
-https://tools.wmflabs.org/openrefine-wikidata/en/api
+https://wdreconcile.toolforge.org/en/api
 
 This is a new reconciliation interface, with the following features:
 * Matching columns with Wikibase properties, to improve the fuzzy
@@ -19,7 +19,7 @@ TODO (Pull requests welcome!)
 * Web-based interface ;
 * More optimization for speed.
 
-![Screenshot](https://tools.wmflabs.org/openrefine-wikidata/static/screenshot_items.png)
+![Screenshot](https://wdreconcile.toolforge.org/static/screenshot_items.png)
 
 MIT license.
 
