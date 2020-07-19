@@ -9,23 +9,23 @@ class Monitoring(object):
         return ('openrefine_wikidata:monitoring:%d:%d' %
                 (duration,time.time() // duration))
 
-    def log_request(self, queries, processing_time):
+    async def log_request(self, queries, processing_time):
         for duration in self.req_rate_bucket_durations:
             key = self.redis_bucket(duration)
-            self.r.incr(key+':req_count')
-            self.r.expire(key+':req_count', duration)
-            self.r.incrby(key+':query_count', queries)
-            self.r.expire(key+':query_count', duration)
-            self.r.incrbyfloat(key+':processing_time', processing_time)
-            self.r.expire(key+':processing_time', duration)
+            await self.r.incr(key+':req_count')
+            await self.r.expire(key+':req_count', duration)
+            await self.r.incrby(key+':query_count', queries)
+            await self.r.expire(key+':query_count', duration)
+            await self.r.incrbyfloat(key+':processing_time', processing_time)
+            await self.r.expire(key+':processing_time', duration)
 
-    def get_rates(self):
+    async def get_rates(self):
         rates = []
         for duration in self.req_rate_bucket_durations:
             key = self.redis_bucket(duration)
-            req_count = float(self.r.get(key+':req_count') or 0)
-            query_count = float(self.r.get(key+':query_count') or 0)
-            processing_time = float(self.r.get(key+':processing_time') or 0)
+            req_count = float((await self.r.get(key+':req_count')) or 0)
+            query_count = float((await self.r.get(key+':query_count')) or 0)
+            processing_time = float((await self.r.get(key+':processing_time')) or 0)
             curtime = time.time()
             time_since_bucket_started = curtime - duration*(curtime // duration)
             rates.append({

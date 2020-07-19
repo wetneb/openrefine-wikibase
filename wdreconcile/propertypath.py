@@ -129,33 +129,34 @@ class PropertyFactory(object):
         except (LexerError, NoParseError) as e:
             raise ValueError("Could not parse '{}': {}".format(property_path_string, str(e)))
 
-    def is_identifier_pid(self, pid):
+    async def is_identifier_pid(self, pid):
         """
         Does this PID represent a unique identifier?
         """
-        self.prefetch_unique_ids()
-        return self.r.sismember(self.unique_ids_key, pid)
+        await self.prefetch_unique_ids()
+        return await self.r.sismember(self.unique_ids_key, pid)
 
-    def prefetch_unique_ids(self):
+    async def prefetch_unique_ids(self):
         """
         Prefetches the list of properties that correspond to unique
         identifiers
         """
-        if self.r.exists(self.unique_ids_key):
+        if await self.r.exists(self.unique_ids_key):
             return # this list was already fetched
 
+        for pid in await self._fetch_unique_ids():
+            if pid:
+                await self.r.sadd(self.unique_ids_key, pid)
+
+        await self.r.expire(self.unique_ids_key, self.ttl)
+
+    async def _fetch_unique_ids(self):
         # Q19847637 is "Wikidata property representing a unique
         # identifier"
         # https://www.wikidata.org/wiki/Q19847637
 
-        results = sparql_wikidata(sparql_query_to_fetch_unique_id_properties)
-
-        for results in results['bindings']:
-            pid = to_p(results['pid']['value'])
-            if pid:
-                self.r.sadd(self.unique_ids_key, pid)
-
-        self.r.expire(self.unique_ids_key, self.ttl)
+        results = await sparql_wikidata(self.item_store.http_session, sparql_query_to_fetch_unique_id_properties)
+        return [to_p(result['pid']['value']) for result in results['bindings']]
 
 
 class PropertyPath(object):
@@ -174,16 +175,16 @@ class PropertyPath(object):
         self.factory = factory
         self.item_store = factory.item_store
 
-    def get_item(self, item):
+    async def get_item(self, item):
         """
         Helper coercing an ItemValue to
         the dict representing the item.
         """
         if not item.value_type == "wikibase-item":
             raise ValueError("get_item expects an ItemValue")
-        return self.item_store.get_item(item.id)
+        return await self.item_store.get_item(item.id)
 
-    def evaluate(self, item_value, lang=None, fetch_labels=True):
+    async def evaluate(self, item_value, lang=None, fetch_labels=True):
         """
         Evaluates the property path on the
         given item, and returning strings (either qids or labels).
@@ -191,10 +192,10 @@ class PropertyPath(object):
         :param lang: the language to use, if any labels are fetched
         :param fetch_labels: should we returns items or labels?
         """
-        def fetch_label(v):
+        async def fetch_label(v):
             if v.value_type != "wikibase-item":
                 return [v.as_string()]
-            item = self.get_item(v)
+            item = await self.get_item(v)
 
             if not lang:
                 # return all labels and aliases
@@ -205,11 +206,12 @@ class PropertyPath(object):
                 labels = item.get('labels', {})
                 return [language_fallback(labels, lang)]
 
-        values = self.step(item_value)
+        values = await self.step(item_value)
         if fetch_labels:
-            values = itertools.chain(
-                *list(map(fetch_label, values))
-            )
+            new_values = []
+            for v in values:
+                new_values += await fetch_label(v)
+            values = new_values
         else:
             values = [
                 val.json.get('id')
@@ -219,7 +221,7 @@ class PropertyPath(object):
         return list(values)
 
 
-    def step(self, v, referenced='any', rank='best'):
+    async def step(self, v, referenced='any', rank='best'):
         """
         Evaluates the property path on the
         given value (most likely an item).
@@ -237,20 +239,23 @@ class PropertyPath(object):
         """
         raise NotImplementedError()
 
-    def is_unique_identifier(self):
+    async def is_unique_identifier(self):
         """
         Given a path, does this path represent a unique identifier
         for the item it starts from?
 
         This only happens when the path is a disjunction of single
-        properties which are all unique identifiers
+        properties which are all unique identifiers.
+
+        This is async because we might need to fetch the set of unique
+        identifiers from the Wikibase instance.
         """
         try:
-            return self.uniform_depth() == 1
+            return await self.uniform_depth() == 1
         except ValueError: # the depth of the path is not uniform
             return False
 
-    def uniform_depth(self):
+    async def uniform_depth(self):
         """
         The uniform depth of a path, if it exists, is the
         number of steps from the item to the target, in
@@ -264,7 +269,7 @@ class PropertyPath(object):
         """
         raise NotImplementedError()
 
-    def fetch_qids_by_values(self, values, lang):
+    async def fetch_qids_by_values(self, values, lang):
         """
         Fetches all the Qids and their labels in the selected language,
         which bear any of the given values along this property.
@@ -296,7 +301,7 @@ class PropertyPath(object):
             lang,
             limit)
 
-        results = sparql_wikidata(sparql_query)
+        results = await sparql_wikidata(self.item_store.http_session, sparql_query)
 
         value_to_qid = defaultdict(list)
 
@@ -308,14 +313,14 @@ class PropertyPath(object):
 
         return value_to_qid
 
-    def expected_types(self):
+    async def expected_types(self):
         """
         Returns a list of possible types expected
         as values of this property.
         """
         return []
 
-    def readable_name(self, lang):
+    async def readable_name(self, lang):
         """
         Returns a readable name of the property in the given
         language. By default it is just the string representation.
@@ -333,16 +338,16 @@ class EmptyPropertyPath(PropertyPath):
     An empty path
     """
 
-    def step(self, v, referenced='any', rank='any'):
+    async def step(self, v, referenced='any', rank='any'):
         return [v]
 
     def __str__(self, add_prefix=False):
         return '.'
 
-    def uniform_depth(self):
+    async def uniform_depth(self):
         return 0
 
-    def expected_types(self):
+    async def expected_types(self):
         return []
 
 class QualifierProperty(PropertyPath):
@@ -354,10 +359,10 @@ class QualifierProperty(PropertyPath):
         self.property_pid = pid_property
         self.qualifier_pid = pid_qualifier
 
-    def step(self, v, referenced='any', rank='any'):
+    async def step(self, v, referenced='any', rank='any'):
         if v.value_type != 'wikibase-item':
             return []
-        item = self.get_item(v)
+        item = await self.get_item(v)
         datavalues = []
         claims = item.get(self.property_pid, [])
 
@@ -366,6 +371,7 @@ class QualifierProperty(PropertyPath):
             best_rank = max(ranks) if ranks else 'deprecated'
             rank = best_rank
 
+        result = []
         for claim in claims:
             if claim['rank'] < rank:
                 continue
@@ -374,24 +380,25 @@ class QualifierProperty(PropertyPath):
                 continue
             for qualifier in (claim.get('qualifiers') or {}).get(self.qualifier_pid) or []:
                 v = WikidataValue.from_datavalue(qualifier)
-                yield v
+                result.append(v)
+        return result
 
     def __str__(self, add_prefix=False):
         prefix = wdt_prefix if add_prefix else ''
         return prefix+self.property_pid+'_'+self.qualifier_pid
 
-    def uniform_depth(self):
+    async def uniform_depth(self):
         raise ValueError('One property is not an identifier')
 
-    def expected_types(self):
+    async def expected_types(self):
         """
         Retrieve the expected type from Wikibase
         """
         # TODO
         return []
 
-    def readable_name(self, lang):
-        return self.item_store.get_label(self.property_pid, lang)+', '+self.item_store.get_label(self.qualifier_pid, lang)
+    async def readable_name(self, lang):
+        return await self.item_store.get_label(self.property_pid, lang)+', '+self.item_store.get_label(self.qualifier_pid, lang)
 
 
 class LeafProperty(PropertyPath):
@@ -402,10 +409,10 @@ class LeafProperty(PropertyPath):
         super(LeafProperty, self).__init__(factory)
         self.pid = pid
 
-    def step(self, v, referenced='any', rank='any'):
+    async def step(self, v, referenced='any', rank='any'):
         if v.value_type != 'wikibase-item':
             return []
-        item = self.get_item(v)
+        item = await self.get_item(v)
         datavalues = []
         claims = item.get(self.pid, [])
 
@@ -414,6 +421,7 @@ class LeafProperty(PropertyPath):
             best_rank = max(ranks) if ranks else 'deprecated'
             rank = best_rank
 
+        result = []
         for claim in claims:
             if claim['rank'] < rank:
                 continue
@@ -425,26 +433,27 @@ class LeafProperty(PropertyPath):
             if not mainsnak:
                 continue
             v = WikidataValue.from_datavalue(mainsnak)
-            yield v
+            result.append(v)
+        return result
 
     def __str__(self, add_prefix=False):
         prefix = wdt_prefix if add_prefix else ''
         return prefix+self.pid
 
-    def uniform_depth(self):
-        if not self.factory.is_identifier_pid(self.pid):
+    async def uniform_depth(self):
+        if not await self.factory.is_identifier_pid(self.pid):
             raise ValueError('One property is not an identifier')
         return 1
 
-    def expected_types(self):
+    async def expected_types(self):
         """
         Retrieve the expected type from Wikibase
         """
         # TODO
         return []
 
-    def readable_name(self, lang):
-        return self.item_store.get_label(self.pid, lang)
+    async def readable_name(self, lang):
+        return await self.item_store.get_label(self.pid, lang)
 
 class QidProperty(PropertyPath):
     """
@@ -453,7 +462,7 @@ class QidProperty(PropertyPath):
     def __init__(self, factory):
         super(QidProperty, self).__init__(factory)
 
-    def step(self, v, referenced='any', rank='any'):
+    async def step(self, v, referenced='any', rank='any'):
         if v.value_type != 'wikibase-item':
             return []
         return [IdentifierValue(value=v.id)]
@@ -461,13 +470,13 @@ class QidProperty(PropertyPath):
     def __str__(self, add_prefix=False):
         return 'qid'
 
-    def uniform_depth(self):
+    async def uniform_depth(self):
         return 1
 
-    def expected_type(self):
+    async def expected_type(self):
         return []
 
-    def readable_name(self, lang):
+    async def readable_name(self, lang):
         # We could potentially look up some 'Qid' item to get translations here…
         return 'Qid'
 
@@ -480,37 +489,39 @@ class TermPath(PropertyPath):
         self.term_type = term_type
         self.lang = lang
 
-    def step(self, v, referenced='any', rank='any'):
+    async def step(self, v, referenced='any', rank='any'):
         if v.value_type != 'wikibase-item':
             return []
 
-        item = self.get_item(v)
+        item = await self.get_item(v)
+        result = []
         if self.term_type == 'L':
             dct = item.get('labels') or {}
             if self.lang in dct:
-                yield IdentifierValue(value=dct[self.lang])
+                result.append(IdentifierValue(value=dct[self.lang]))
         elif self.term_type == 'D':
             dct = item.get('descriptions') or {}
             if self.lang in dct:
-                yield IdentifierValue(value=dct[self.lang])
+                result.append(IdentifierValue(value=dct[self.lang]))
         elif self.term_type == 'A':
             dct = item.get('full_aliases') or {}
             for alias in dct.get(self.lang) or []:
-                yield IdentifierValue(value=alias)
+                result.append(IdentifierValue(value=alias))
+        return result
 
     def __str__(self, add_prefix=False):
         return self.term_type + self.lang
 
-    def uniform_depth(self):
+    async def uniform_depth(self):
         raise ValueError('One property is not an identifier')
 
-    def expected_types(self):
+    async def expected_types(self):
         """
         Retrieve the expected type from Wikidata
         """
         return []
 
-    def readable_name(self, lang):
+    async def readable_name(self, lang):
         return self.term_type + self.lang
 
 class SitelinkPath(PropertyPath):
@@ -522,28 +533,27 @@ class SitelinkPath(PropertyPath):
         super(SitelinkPath, self).__init__(factory)
         self.site = site
 
-    def step(self, v, referenced='any', rank='any'):
+    async def step(self, v, referenced='any', rank='any'):
         if v.value_type != 'wikibase-item':
             return []
-        item = self.get_item(v)
+        item = await self.get_item(v)
 
         if not item:
             return []
         sitelink = (item.get('sitelinks') or {}).get(self.site)
         if sitelink:
             return [IdentifierValue(value=sitelink)]
-        return []
 
     def __str__(self, add_prefix=False):
         return 'S'+self.site
 
-    def uniform_depth(self):
+    async def uniform_depth(self):
         raise ValueError('One property is not an identifier')
 
-    def expected_types(self):
+    async def expected_types(self):
         return []
 
-    def readable_name(self, lang):
+    async def readable_name(self, lang):
         return 'Sitelink ' + self.site
 
 class ConcatenatedPropertyPath(PropertyPath):
@@ -556,10 +566,10 @@ class ConcatenatedPropertyPath(PropertyPath):
         self.a = a
         self.b = b
 
-    def step(self, v, referenced='any', rank='any'):
-        intermediate_values = self.a.step(v, referenced, rank)
+    async def step(self, v, referenced='any', rank='any'):
+        intermediate_values = await self.a.step(v, referenced, rank)
         final_values = [
-            self.b.step(v2, referenced, rank)
+            (await self.b.step(v2, referenced, rank))
             for v2 in intermediate_values
         ]
         return itertools.chain(*final_values)
@@ -567,11 +577,11 @@ class ConcatenatedPropertyPath(PropertyPath):
     def __str__(self, add_prefix=False):
         return self.a.__str__(add_prefix) + '/' + self.b.__str__(add_prefix)
 
-    def uniform_depth(self):
-        return self.a.uniform_depth() + self.b.uniform_depth()
+    async def uniform_depth(self):
+        return await self.a.uniform_depth() + await self.b.uniform_depth()
 
-    def expected_types(self):
-        return self.b.expected_types()
+    async def expected_types(self):
+        return await self.b.expected_types()
 
 class DisjunctedPropertyPath(PropertyPath):
     """
@@ -582,23 +592,23 @@ class DisjunctedPropertyPath(PropertyPath):
         self.a = a
         self.b = b
 
-    def step(self, v, referenced='any', rank='any'):
-        va = self.a.step(v, referenced, rank)
-        vb = self.b.step(v, referenced, rank)
+    async def step(self, v, referenced='any', rank='any'):
+        va = await self.a.step(v, referenced, rank)
+        vb = await self.b.step(v, referenced, rank)
         return itertools.chain(*[va,vb])
 
     def __str__(self, add_prefix=False):
         return '('+self.a.__str__(add_prefix) + '|' + self.b.__str__(add_prefix)+')'
 
-    def uniform_depth(self):
-        depth_a = self.a.uniform_depth()
-        depth_b = self.b.uniform_depth()
+    async def uniform_depth(self):
+        depth_a = await self.a.uniform_depth()
+        depth_b = await self.b.uniform_depth()
         if depth_a != depth_b:
             raise ValueError('The depth is not uniform.')
         return depth_a
 
-    def expected_types(self):
-        return (self.a.expected_types() + self.b.expected_types())
+    async def expected_types(self):
+        return (await self.a.expected_types() + await self.b.expected_types())
 
 class SubfieldPropertyPath(PropertyPath):
     """
@@ -609,13 +619,16 @@ class SubfieldPropertyPath(PropertyPath):
         self.path = path
         self.subfield = subfield
 
-    def step(self, v, referenced='any', rank='any'):
-        orig_values = list(self.path.step(v, referenced, rank))
+    async def step(self, v, referenced='any', rank='any'):
+        orig_values = list(await self.path.step(v, referenced, rank))
         images_values = list(map(lambda val: subfield_factory.run(self.subfield, val), orig_values))
         return (val for val in images_values if val is not None)
 
-    def uniform_depth(self):
+    async def uniform_depth(self):
         raise ValueError('One property bears a subfield')
 
-    def expected_types(self):
+    async def expected_types(self):
         return []
+
+    def __str__(self, add_prefix=False):
+        return self.path.__str__(add_prefix) + '@' + self.subfield

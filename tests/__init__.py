@@ -1,14 +1,3 @@
-import requests_cache
-
-requests_cache.install_cache('tests/requests_cache')
-
-from .typematcher import *
-from .itemstore import *
-from .engine import *
-from .suggest import *
-from .propertypath import *
-from .utils import *
-from .wikidatavalue import *
 
 import doctest
 def load_tests(loader, tests, ignore):

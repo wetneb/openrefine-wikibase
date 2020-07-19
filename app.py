@@ -11,8 +11,10 @@ from wdreconcile.monitoring import Monitoring
 
 from config import *
 
-reconcile = ReconcileEngine(redis_client)
-suggest = SuggestEngine(redis_client)
+# TODO wire this up
+http_session = None
+reconcile = ReconcileEngine(redis_client, http_session)
+suggest = SuggestEngine(redis_client, http_session)
 monitoring = Monitoring(redis_client)
 
 def jsonp(view):

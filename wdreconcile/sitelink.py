@@ -1,10 +1,9 @@
 
 import re
-import requests
+import aiohttp
 from urllib.parse import quote_plus, unquote_plus
 from collections import defaultdict
 
-from .sparqlwikidata import sparql_wikidata
 from .utils import to_q
 from config import redis_key_prefix, mediawiki_api_endpoint
 
@@ -34,10 +33,11 @@ class SitelinkFetcher(object):
     sitelink_regex = re.compile(
         r'^https?://([a-z]*)\.('+wikimedia_sites+')\.org/wiki/(['+legal_title_chars+']+)$')
 
-    def __init__(self, redis_client):
+    def __init__(self, redis_client, http_session):
         self.r = redis_client
         self.prefix = redis_key_prefix+'sitelinks'
         self.ttl = 60*60 # one hour
+        self.http_session = http_session
 
     @classmethod
     def parse(cls, sitelink):
@@ -123,8 +123,7 @@ class SitelinkFetcher(object):
             wiki,
             cleaned_title)
 
-    @classmethod
-    def get_qids_via_api(cls, wiki_id, titles):
+    async def get_qids_via_api(self, wiki_id, titles):
         """
         Given a wiki code and a list of titles for that wiki,
         return the list of qids (or Nones) corresponding to these
@@ -138,34 +137,32 @@ class SitelinkFetcher(object):
                  'titles': title_string,
                  'format': 'json'}
         try:
-            r = requests.get(mediawiki_api_endpoint, params=params)
-            for qid, item in r.json().get('entities', {}).items():
-                own_title = item.get('sitelinks', {}).get(wiki_id, {}).get('title')
-                if own_title:
-                    idx = titles.index(own_title)
-                    results[idx] = qid
-        except requests.exceptions.RequestException as e:
+            async with self.http_session.get(mediawiki_api_endpoint, params=params, raise_for_status=True) as r:
+                json_resp = await r.json()
+                for qid, item in json_resp.get('entities', {}).items():
+                    own_title = item.get('sitelinks', {}).get(wiki_id, {}).get('title')
+                    if own_title:
+                        idx = titles.index(own_title)
+                        results[idx] = qid
+
+        except aiohttp.ClientResponseError as e:
             print(e)
         except ValueError as e:
             print("Unexpected error in get_qids_via_api")
             raise e
         return results
 
-    @classmethod
-    def resolve_redirects_for_titles(cls, lang_code, wiki, titles):
-        """
-        >>> SitelinkFetcher.resolve_redirects_for_titles('en','wikipedia', ['Knuth-Bendix','Lowendal', 'Paris'])
-        ['Knuth–Bendix completion algorithm', 'Ulrich Friedrich Woldemar von Löwendal', 'Paris']
-        """
-        try:
-            r = requests.get('https://{}.{}.org/w/api.php'.format(lang_code, wiki),
+    async def resolve_redirects_for_titles(self, lang_code, wiki, titles):
+        async with self.http_session.get('https://{}.{}.org/w/api.php'.format(lang_code, wiki),
                 params={
                     'action': 'query',
                     'format': 'json',
                     'redirects': '1',
                     'titles': '|'.join(titles),
-                })
-            response = r.json()['query'].get('redirects', [])
+                },
+                raise_for_status=True) as r:
+            json_response = await r.json()
+            response = json_response['query'].get('redirects', [])
             redirect_map = {
                 redirect['from']:redirect['to']
                 for redirect in response
@@ -178,38 +175,30 @@ class SitelinkFetcher(object):
                 results.append(title)
             return results
 
-        except requests.exceptions.RequestException as e:
-            raise e
-
-    @classmethod
-    def get_qids(cls, sitelinks):
+    async def get_qids(self, sitelinks):
         """
         Given a list of normalized sitelinks, return a list of
         the Qids they are associated to (or None if they are invalid,
         or not linked yet).
-
-        >>> SitelinkFetcher.get_qids(['https://de.wikipedia.org/wiki/Chelsea_Manning', 'https://en.wikipedia.org/wiki/Knuth-Bendix'])
-        ['Q298423', 'Q2835803']
-        >>> SitelinkFetcher.get_qids([None, None]) # no request made
-        [None, None]
         """
         qids = [None] * len(sitelinks)
 
         # Group sitelinks by wiki
         by_wiki = defaultdict(list)
         for idx, sitelink in enumerate(sitelinks):
-            parsed = cls.parse(sitelink)
+            parsed = self.parse(sitelink)
             if parsed:
                 lang_code, wiki, title = parsed
                 by_wiki[(lang_code, wiki)].append((idx, title))
 
+        # TODO use gather to run these requests in parallel
         for (lang_code, wiki), titles in by_wiki.items():
             # Resolve redirects
-            redirected_titles = cls.resolve_redirects_for_titles(lang_code, wiki, [title for _, title in titles])
+            redirected_titles = await self.resolve_redirects_for_titles(lang_code, wiki, [title for _, title in titles])
 
             # Resolve qids
-            wiki_id = cls.wiki_id(lang_code, wiki)
-            current_qids = cls.get_qids_via_api(wiki_id, redirected_titles)
+            wiki_id = self.wiki_id(lang_code, wiki)
+            current_qids = await self.get_qids_via_api(wiki_id, redirected_titles)
 
             for new_idx, (orig_idx, title) in enumerate(titles):
                 qids[orig_idx] = current_qids[new_idx]
@@ -219,7 +208,7 @@ class SitelinkFetcher(object):
     def _key_for_sitelink(self, sitelink):
         return ':'.join([self.prefix, sitelink])
 
-    def sitelinks_to_qids(self, sitelinks):
+    async def sitelinks_to_qids(self, sitelinks):
         """
         Same as get_qids, but uses redis to cache the results, and normalizes its input,
         and returns the results as a dictionary..
@@ -233,9 +222,10 @@ class SitelinkFetcher(object):
             return result
 
         # Query the cache for existing mappings
-        current_values = self.r.mget([
+        keys = [
             self._key_for_sitelink(sitelink)
-            for sitelink in non_nulls])
+            for sitelink in non_nulls]
+        current_values = await self.r.mget(*keys)
         for i, v in enumerate(current_values):
             if v is None:
                 to_fetch.add(non_nulls[i])
@@ -243,19 +233,20 @@ class SitelinkFetcher(object):
                 result[non_nulls[i]] = v
 
         to_fetch = list(to_fetch)
-        fetched = SitelinkFetcher.get_qids(to_fetch)
         to_write = {}
-        for i, v in enumerate(fetched):
-            if v:
-                to_write[to_fetch[i]] = v
-        result.update(to_write)
+        if to_fetch:
+            fetched = await self.get_qids(to_fetch)
+            for i, v in enumerate(fetched):
+                if v:
+                    to_write[to_fetch[i]] = v
+            result.update(to_write)
 
         # Write newly-fetched qids to the cache
         if to_write:
-            self.r.mset({self._key_for_sitelink(sitelink) : qid
+            await self.r.mset({self._key_for_sitelink(sitelink) : qid
                     for sitelink, qid in to_write.items()})
         for sitelink in to_write:
-            self.r.expire(self._key_for_sitelink(sitelink), self.ttl)
+            await self.r.expire(self._key_for_sitelink(sitelink), self.ttl)
 
         return result
 

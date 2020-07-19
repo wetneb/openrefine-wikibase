@@ -1,3 +1,10 @@
+aioredis
+aiohttp
+aiodns
+aioresponses
+pytest
+pytest-mock
+
 requests
 docopt
 bottle
@@ -8,4 +15,3 @@ requests_mock # for testing
 unidecode
 funcparserlib
 python_dateutil
-requests_cache

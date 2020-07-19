@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from .itemstore import ItemStore
 from .typematcher import TypeMatcher
-from .utils import to_q
+from .utils import to_q, to_p
 from .language import language_fallback
 from .propertypath import PropertyFactory
 from .wikidatavalue import ItemValue
@@ -19,9 +19,10 @@ class ReconcileEngine(object):
     """
     Main class of the reconciliation system
     """
-    def __init__(self, redis_client):
-        self.item_store = ItemStore(redis_client)
-        self.type_matcher = TypeMatcher(redis_client)
+    def __init__(self, redis_client, http_session):
+        self.http_session = http_session
+        self.item_store = ItemStore(redis_client, http_session)
+        self.type_matcher = TypeMatcher(redis_client, http_session)
         self.pf = PropertyFactory(self.item_store)
         self.sitelink_fetcher = self.item_store.sitelink_fetcher
         self.property_weight = 0.4
@@ -30,37 +31,39 @@ class ReconcileEngine(object):
         self.avoid_type = config.avoid_items_of_class
         self.p31_property_path = self.pf.parse(type_property_path)
 
-    def wikibase_string_search(self, query_string, num_results, default_language):
+    async def wikibase_string_search(self, query_string, num_results, default_language):
         """
         Use the Wikidata API to search for matching items
         """
-        r = requests.get(
-            config.mediawiki_api_endpoint,
-            {'action':'query',
-            'format':'json',
-            'list':'search',
-            'srnamespace':config.wikibase_namespace_id,
-            'srlimit':num_results,
-            'srsearch':query_string,
-            'srwhat':'text'},
-            headers=config.headers)
-        resp = r.json()
-        # NOTE: remove the wikibase namespace prefix to only get the QID
-        search_results = [item['title'][len(config.wikibase_namespace_prefix):] for item in resp.get('query', {}).get('search', [])]
-        r = requests.get(
-            config.mediawiki_api_endpoint,
-            {'action':'wbsearchentities',
-            'format':'json',
-            'language': default_language,
-            'limit':num_results,
-            'search':query_string},
-            headers=config.headers)
-        resp = r.json()
-        autocomplete_results = [item['id'] for item in resp.get('search', [])]
+        if not query_string.strip():
+            return []
+        async with self.http_session.get(
+                config.mediawiki_api_endpoint,
+                params={'action':'query',
+                'format':'json',
+                'list':'search',
+                'srnamespace':config.wikibase_namespace_id,
+                'srlimit':num_results,
+                'srsearch':query_string,
+                'srwhat':'text'},
+                headers=config.headers) as r:
+            resp = await r.json()
+            # NOTE: remove the wikibase namespace prefix to only get the QID
+            search_results = [item['title'][len(config.wikibase_namespace_prefix):] for item in resp.get('query', {}).get('search', [])]
+        async with self.http_session.get(
+                config.mediawiki_api_endpoint,
+                params={'action':'wbsearchentities',
+                'format':'json',
+                'language': default_language,
+                'limit':num_results,
+                'search':query_string},
+                headers=config.headers) as r:
+            resp = await r.json()
+            autocomplete_results = [item['id'] for item in resp.get('search', [])]
 
         return search_results + autocomplete_results
 
-    def prepare_property(self, prop):
+    async def prepare_property(self, prop, detect_unique_id=True):
         """
         Converts a property to a SPARQL path
         """
@@ -76,10 +79,11 @@ class ReconcileEngine(object):
         # This indicates whether the property is a unique
         # identifier for the resolved items. If so, we can use it
         # to fetch matches, without relying on string search.
-        prop['unique_id'] = path.is_unique_identifier()
+        if detect_unique_id:
+            prop['unique_id'] = await path.is_unique_identifier()
         return prop
 
-    def process_queries(self, queries, default_language='en'):
+    async def process_queries(self, queries, default_language='en'):
         """
         This contains the backbone of the reconciliation algorithm.
 
@@ -90,8 +94,10 @@ class ReconcileEngine(object):
         """
         # Prepare all properties
         for query_id in queries:
-            queries[query_id]['properties'] = list(map(self.prepare_property,
-                queries[query_id].get('properties', [])))
+            prepared_properties = []
+            for prop in queries[query_id].get('properties', []):
+                prepared_properties.append(await self.prepare_property(prop))
+            queries[query_id]['properties'] = prepared_properties
 
         # Find primary ids in the queries
         unique_id_values = defaultdict(set)
@@ -103,7 +109,7 @@ class ReconcileEngine(object):
 
         # Find Qids and labels by primary id
         unique_id_to_qid = {
-            path : path.fetch_qids_by_values(values, default_language)
+            path : await path.fetch_qids_by_values(values, default_language)
             for path, values in unique_id_values.items()
         }
 
@@ -112,7 +118,7 @@ class ReconcileEngine(object):
         for query in queries.values():
             possible_sitelinks += [p['v'] for p in query.get('properties', [])]
         # (this is cached in redis)
-        sitelinks_to_qids = self.sitelink_fetcher.sitelinks_to_qids(
+        sitelinks_to_qids = await self.sitelink_fetcher.sitelinks_to_qids(
             possible_sitelinks)
 
         # Fetch all candidate qids for each query
@@ -153,24 +159,24 @@ class ReconcileEngine(object):
             elif qid_from_sitelink:
                 qids[query_id] = [qid_from_sitelink]
             else: # otherwise just search for the string with the WD API
-                qids[query_id] = self.wikibase_string_search(query['query'],
+                qids[query_id] = await self.wikibase_string_search(query['query'],
                                     num_results_before_filter, default_language)
 
             qids_to_prefetch |= set(qids[query_id])
 
         # Prefetch all items
-        self.item_store.get_items(qids_to_prefetch)
+        await self.item_store.get_items(qids_to_prefetch)
 
         # Perform each query
         result = {}
         for query_id, query in queries.items():
             result[query_id] = {
-                'result':self._rank_items(query,qids[query_id], default_language)
+                'result': await self._rank_items(query, qids[query_id], default_language)
             }
 
         return result
 
-    def _rank_items(self, query, ids, default_language):
+    async def _rank_items(self, query, ids, default_language):
         """
         Given a query and candidate qids returned from the search API,
         return the list of fleshed-out items from these QIDs, filtered
@@ -191,7 +197,7 @@ class ReconcileEngine(object):
             self.validation_threshold_discount_per_property * len(properties))
 
         # retrieve corresponding items
-        items = self.item_store.get_items(ids)
+        items = await self.item_store.get_items(ids)
 
         # Add the label as "yet another property"
         properties_with_label = properties + [{
@@ -209,19 +215,19 @@ class ReconcileEngine(object):
             itemvalue = ItemValue(id=qid)
 
             # Check the type if we have a type constraint
-            current_types = [val.id for val in self.p31_property_path.step(itemvalue) if not val.is_novalue()]
+            current_types = [val.id for val in await self.p31_property_path.step(itemvalue) if not val.is_novalue()]
             type_found = len(current_types) > 0
 
             if target_types:
-                good_type = any([
-                    any([
-                        self.type_matcher.is_subclass(typ, target_type)
-                        for typ in current_types
-                    ])
-                    for target_type in target_types])
+                good_type = False
+                for target_type in target_types:
+                    for typ in current_types:
+                        good_type = await self.type_matcher.is_subclass(typ, target_type)
+                        if good_type:
+                            break
             elif self.avoid_type: # Check if we should ignore this item
                 good_type = not all([
-                   self.type_matcher.is_subclass(typ, self.avoid_type)
+                   await self.type_matcher.is_subclass(typ, self.avoid_type)
                    for typ in current_types
                 ])
             else:
@@ -243,11 +249,11 @@ class ReconcileEngine(object):
 
                 maxscore = 0
                 bestval = None
-                values = path.step(
+                values = await path.step(
                             ItemValue(id=qid))
 
                 for val in values:
-                    curscore = val.match_with_str(ref_val, self.item_store)
+                    curscore = await val.match_with_str(ref_val, self.item_store)
                     if curscore > maxscore or bestval is None:
                         bestval = val
                         maxscore = curscore
@@ -279,7 +285,7 @@ class ReconcileEngine(object):
             scored['score'] = avg
 
             scored['id'] = qid
-            scored['name'] = self.item_store.get_label(qid, default_language)
+            scored['name'] = await self.item_store.get_label(qid, default_language)
             scored['type'] = current_types
             types_to_prefetch |= set(scored['type'])
             scored['match'] = False # will be changed later
@@ -294,7 +300,7 @@ class ReconcileEngine(object):
                 scored_items.append(scored)
 
         # Prefetch the labels for the types
-        self.item_store.get_items(list(types_to_prefetch))
+        await self.item_store.get_items(list(types_to_prefetch))
 
         # If no item had the right type, fall back on items with no type.
         # These items already have a much lower score, so there will be
@@ -305,7 +311,7 @@ class ReconcileEngine(object):
         # Add the labels to the response
         for i in range(len(scored_items)):
             scored_items[i]['type'] = [
-                {'id':id, 'name':self.item_store.get_label(id, default_language)}
+                {'id':id, 'name': await self.item_store.get_label(id, default_language)}
                     for id in scored_items[i]['type']]
 
         # sorting by inverse qid size for issue #26
@@ -325,11 +331,11 @@ class ReconcileEngine(object):
         max_results = int(query.get('limit') or config.default_num_results)
         return ranked_items[:max_results]
 
-    def process_single_query(self, q, default_language='en'):
-        results = self.process_queries({'q':q}, default_language)
+    async def process_single_query(self, q, default_language='en'):
+        results = await self.process_queries({'q':q}, default_language)
         return results['q']
 
-    def fetch_values(self, args):
+    async def fetch_values(self, args):
         """
         Same as fetch_property_by_batch, but for a single
         item (more convenient for testing).
@@ -340,7 +346,7 @@ class ReconcileEngine(object):
         new_args = args.copy()
         qid = args.get('item', '')
         new_args['ids'] = qid
-        results = self.fetch_property_by_batch(new_args)
+        results = await self.fetch_property_by_batch(new_args)
         values = results['values'][0]
         if args.get('flat') == 'true':
             if values:
@@ -350,7 +356,7 @@ class ReconcileEngine(object):
         else:
             return {'item':qid, 'prop':results['prop'], 'values':values}
 
-    def fetch_property_by_batch(self, args):
+    async def fetch_property_by_batch(self, args):
         """
         Endpoint allowing clients to fetch the values associated
         to items and a property path.
@@ -361,7 +367,7 @@ class ReconcileEngine(object):
         prop = args.get('prop')
         if not prop:
             raise ValueError('No property provided')
-        path = self.prepare_property({'pid':prop})['path']
+        path = (await self.prepare_property({'pid':prop}, detect_unique_id=False))['path']
 
         fetch_labels = ((args.get('label') or 'true') == 'true')
 
@@ -371,7 +377,7 @@ class ReconcileEngine(object):
             raise ValueError('Invalid Qid provided')
 
         values = [
-            path.evaluate(
+            await path.evaluate(
                 ItemValue(id=qid),
                 lang=lang,
                 fetch_labels=fetch_labels,
@@ -379,12 +385,12 @@ class ReconcileEngine(object):
 
         return {'prop':prop, 'values':values}
 
-    def fetch_properties_by_batch(self, args):
+    async def fetch_properties_by_batch(self, args):
         """
         Endpoint allowing clients to fetch multiple properties
         (or property paths) on multiple items, simultaneously.
 
-        This is complies with OpenRefine's data extension protocol.
+        This complies with OpenRefine's data extension protocol.
         """
         lang = args.get('lang')
         if not lang:
@@ -405,7 +411,7 @@ class ReconcileEngine(object):
 
         paths = {
             prop['id']: {
-               'path': self.prepare_property({'pid':prop['id']})['path'],
+               'path': (await self.prepare_property({'pid':prop['id']}, detect_unique_id=False))['path'],
                'settings': prop.get('settings', {}),
             }
             for prop in props
@@ -416,8 +422,8 @@ class ReconcileEngine(object):
             current_row = {}
             for pid, prop in paths.items():
                 current_row[pid] = [
-                    v.as_openrefine_cell(lang, self.item_store)
-                    for v in prop['path'].step(
+                    await v.as_openrefine_cell(lang, self.item_store)
+                    for v in await prop['path'].step(
                         ItemValue(id=qid),
                         prop['settings'].get('references') or 'any',
                         prop['settings'].get('rank') or 'best')
@@ -434,7 +440,8 @@ class ReconcileEngine(object):
 
 
         # Prefetch property names
-        self.item_store.get_items(paths.keys())
+        properties = [to_p(prop) for prop in paths.keys()]
+        await self.item_store.get_items([prop for prop in properties if prop])
 
         meta = []
         for prop in props:
@@ -443,16 +450,16 @@ class ReconcileEngine(object):
             settings = paths[pid].get('settings') or {}
             dct = {
              'id':pid,
-             'name':path.readable_name(lang),
+             'name':await path.readable_name(lang),
             }
             if settings:
                 dct['settings'] = settings
-            expected_types = path.expected_types()
+            expected_types = await path.expected_types()
             if expected_types and not settings.get('count') == 'on':
                 qid = expected_types[0]
                 dct['type'] = {
                     'id':qid,
-                    'name':self.item_store.get_label(qid, lang),
+                    'name':await self.item_store.get_label(qid, lang),
                 }
             meta.append(dct)
 
