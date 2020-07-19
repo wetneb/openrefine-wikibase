@@ -8,8 +8,7 @@ language: python
 
 
 python:
-  - 3.4
-  - 3.5
+  - 3.7
 
 services:
   - redis
@@ -26,7 +25,7 @@ before_script:
   - pwd
 
 script:
-  - coverage run --omit=/home/travis/virtualenv/* -m unittest tests
+  - coverage run --omit=/home/travis/virtualenv/* -m pytest
 
 after_success:
   - coveralls

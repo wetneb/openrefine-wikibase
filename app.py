@@ -20,7 +20,8 @@ app = cors(app, allow_origin='*')
 @app.before_serving
 async def setup():
     app.redis_client = await aioredis.create_redis_pool(redis_uri)
-    app.http_session_obj = aiohttp.ClientSession()
+    app.http_connector = aiohttp.TCPConnector(limit_per_host=10)
+    app.http_session_obj = aiohttp.ClientSession(connector=app.http_connector)
     app.http_session = await app.http_session_obj.__aenter__()
 
 @app.before_request
@@ -40,8 +41,9 @@ def jsonp(view):
         args = {}
         # if we access the args via get(),
         # we can get encoding errors...
-        for k in await request.form:
-            args[k] = request.form.get(k)
+        post_data = await request.form
+        for k in post_data:
+            args[k] = post_data.get(k)
         for k in request.args:
             args[k] = request.args.get(k)
         callback = args.get('callback')
@@ -215,98 +217,98 @@ async def api(args):
 @jsonp
 async def suggest_property(args):
     args['lang'] = fix_lang(args.get('lang'))
-    return suggest.find_type(args)
+    return await g.suggest.find_type(args)
 
 @app.route('/suggest/property', endpoint='suggest-property-default-lang', methods=['GET','POST'])
 @jsonp
 async def suggest_property(args):
     args['lang'] = fix_lang(args.get('lang'))
-    return suggest.find_property(args)
+    return await g.suggest.find_property(args)
 
 @app.route('/suggest/entity', endpoint='suggest-entity-default-lang', methods=['GET','POST'])
 @jsonp
 async def suggest_property(args):
     args['lang'] = fix_lang(args.get('lang'))
-    return suggest.find_entity(args)
+    return await g.suggest.find_entity(args)
 
 @app.route('/preview', endpoint='preview-default-lang', methods=['GET','POST'])
 @jsonp
 async def preview(args):
     args['lang'] = fix_lang(args.get('lang'))
-    return suggest.preview(args)
+    return await g.suggest.preview(args)
 
 @app.route('/<lang>/suggest/type', endpoint='suggest-type', methods=['GET','POST'])
 @jsonp
 async def suggest_type(args, lang):
     args['lang'] = fix_lang(lang)
-    return suggest.find_type(args)
+    return await g.suggest.find_type(args)
 
 @app.route('/<lang>/suggest/property', endpoint='suggest-property', methods=['GET','POST'])
 @jsonp
 async def suggest_property(args, lang):
     args['lang'] = fix_lang(lang)
-    return suggest.find_property(args)
+    return await g.suggest.find_property(args)
 
 @app.route('/<lang>/suggest/entity', endpoint='suggest-entity', methods=['GET','POST'])
 @jsonp
 async def suggest_entity(args, lang):
     args['lang'] = fix_lang(lang)
-    return suggest.find_entity(args)
+    return await g.suggest.find_entity(args)
 
 @app.route('/<lang>/flyout/type', endpoint='flyout-type', methods=['GET','POST'])
 @jsonp
 async def flyout_type(args, lang):
     args['lang'] = fix_lang(lang)
-    return suggest.flyout_type(args)
+    return await g.suggest.flyout_type(args)
 
 @app.route('/<lang>/flyout/property', endpoint='flyout-property', methods=['GET','POST'])
 @jsonp
 async def flyout_property(args, lang):
     args['lang'] = fix_lang(lang)
-    return suggest.flyout_property(args)
+    return await g.suggest.flyout_property(args)
 
 @app.route('/<lang>/flyout/entity', endpoint='flyout-entity', methods=['GET','POST'])
 @jsonp
 async def flyout_entity(args, lang):
     args['lang'] = fix_lang(lang)
-    return suggest.flyout_entity(args)
+    return await g.suggest.flyout_entity(args)
 
 @app.route('/<lang>/preview', endpoint='preview', methods=['GET','POST'])
 @jsonp
 async def preview(args, lang):
     args['lang'] = fix_lang(lang)
-    return suggest.preview(args)
+    return await g.suggest.preview(args)
 
 @app.route('/fetch_values', endpoint='fetch-values-default-lang', methods=['GET','POST'])
 @jsonp
 async def fetch_values(args):
     args['lang'] = fix_lang(args.get('lang'))
-    return reconcile.fetch_values(args)
+    return await g.reconcile.fetch_values(args)
 
 @app.route('/<lang>/fetch_values', endpoint='fetch-values', methods=['GET','POST'])
 @jsonp
 async def fetch_values(args, lang):
     args['lang'] = fix_lang(lang)
-    return reconcile.fetch_values(args)
+    return await g.reconcile.fetch_values(args)
 
 @app.route('/<lang>/propose_properties', endpoint='propose-properties', methods=['GET','POST'])
 @jsonp
 async def propose_properties(args, lang):
     args['lang'] = fix_lang(lang)
-    return suggest.propose_properties(args)
+    return await g.suggest.propose_properties(args)
 
 @app.route('/<lang>/fetch_property_by_batch', endpoint='fetch-property-batch', methods=['GET','POST'])
 @jsonp
 async def fetch_property_by_batch(args, lang):
     args['lang'] = fix_lang(lang)
-    return reconcile.fetch_property_by_batch(args)
+    return await reconcile.fetch_property_by_batch(args)
 
 @app.route('/<lang>/fetch_properties_by_batch', endpoint='fetch-properties-batch', methods=['GET','POST'])
 @jsonp
 async def fetch_property_by_batch(args, lang):
     args['lang'] = fix_lang(lang)
     args['extend'] = json.loads(args.get('extend', '{}'))
-    return reconcile.fetch_properties_by_batch(args)
+    return await reconcile.fetch_properties_by_batch(args)
 
 @app.route('/', endpoint='home')
 async def home():

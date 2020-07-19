@@ -1,6 +1,4 @@
-import requests
-from bottle import SimpleTemplate
-from bottle import html_escape
+from quart import render_template
 import hashlib
 import re
 from string import Template
@@ -33,27 +31,26 @@ def commons_image_url(filename):
         base_fname += '.png'
     return base_fname
 
-def autodescribe(qid, lang):
+async def autodescribe(http_session, qid, lang):
     """
     Calls the autodesc API by Magnus
     """
     if not autodescribe_endpoint:
         return ''
     try:
-        r = requests.get(autodescribe_endpoint,
-            {'q':qid,
-            'format':'json',
-            'mode':'short',
-            'links':'wikidata',
-            'get_infobox':'yes',
-            'lang':lang},
-            timeout=2)
-        desc = r.json().get('result', '')
-        desc = desc.replace('<a href', '<a target="_blank" href')
-        return desc
-    except (requests.exceptions.RequestException, ValueError) as e:
+        async with http_session.get(autodescribe_endpoint,
+                    params={'q':qid,
+                    'format':'json',
+                    'mode':'short',
+                    'links':'wikidata',
+                    'get_infobox':'yes',
+                    'lang':lang},
+                    timeout=2) as r:
+            desc = (await r.json()).get('result', '')
+            desc = desc.replace('<a href', '<a target="_blank" href')
+            return desc
+    except ValueError as e:
         print(e)
-        print(e.request.url)
         return ''
 
 class SuggestEngine(object):
@@ -66,14 +63,12 @@ class SuggestEngine(object):
         self.ft = PropertyFactory(self.store)
         self.store.ttl = 24*60*60 # one day
         self.image_path = self.ft.parse('|'.join(image_properties))
-        with open('templates/preview.html') as f:
-            self.preview_template = SimpleTemplate(f.read(), noescape=True)
 
-    def get_image_statements(self, item_value):
-        image_values = self.image_path.step(item_value)
+    async def get_image_statements(self, item_value):
+        image_values = await self.image_path.step(item_value)
         return [v.as_string() for v in image_values if not v.is_novalue()]
 
-    def get_image_for_item(self, item_value, item, lang):
+    async def get_image_for_item(self, item_value, item, lang):
         """
         Returns a Wikimedia Commons file name
         for an image representing this item
@@ -81,32 +76,32 @@ class SuggestEngine(object):
         :returns: a pair of (filename, alt text)
                  or None if we did not find anything
         """
-        images = list(self.get_image_statements(item_value))
+        images = list(await self.get_image_statements(item_value))
         if images:
             return (commons_image_url(images[0]),
                     lngfb(item.get('labels'), lang) or id)
         else:
             return (fallback_image_url, fallback_image_alt)
 
-    def preview(self, args):
+    async def preview(self, args):
         id = args['id']
         item_value = ItemValue(id=id)
-        item = self.store.get_item(id)
+        item = await self.store.get_item(id)
         lang = args.get('lang')
-        image = self.get_image_for_item(item_value, item, lang)
+        image = await self.get_image_for_item(item_value, item, lang)
 
-        desc = self.get_description(item, lang)
+        desc = await self.get_description(item, lang)
 
         args = {
             'id':id,
-            'label': html_escape(lngfb(item.get('labels'), lang) or id),
+            'label': lngfb(item.get('labels'), lang) or id,
             'description': desc,
             'image': image,
             'url': qid_url_pattern.replace('{{id}}',id),
             'width': preview_width,
             'height': preview_height,
         }
-        return self.preview_template.render(**args)
+        return await render_template('preview.html', **args)
 
     def get_label(self, item, target_lang):
         """
@@ -118,7 +113,7 @@ class SuggestEngine(object):
             return item['label']
         return item['id']
 
-    def get_description(self, item, lang):
+    async def get_description(self, item, lang):
         """
         Gets a description from an item and target language.
         """
@@ -126,36 +121,36 @@ class SuggestEngine(object):
         if lang in descriptions and ' ' in descriptions[lang]:
             return html_escape(descriptions[lang])
         else:
-            return autodescribe(item['id'], lang)
+            return await autodescribe(self.http_session, item['id'], lang)
 
-    def find_something(self, args, typ='item', prefix=''):
+    async def find_something(self, args, typ='item', prefix=''):
         lang = args.get('lang', 'en')
-        r = requests.get(mediawiki_api_endpoint,
-                {'action':'wbsearchentities',
+        async with self.http_session.get(mediawiki_api_endpoint,
+                params={'action':'wbsearchentities',
                  'format':'json',
                  'type':typ,
                  'search':args['prefix'],
                  'language':lang,
                  'uselang':lang,
-                 })
-        r.raise_for_status()
-        resp = r.json()
+                 },
+                raise_for_status=True) as r:
+            resp = await r.json()
 
-        search_results = resp.get('search',[])
+            search_results = resp.get('search',[])
 
-        result = [
-            {
-             'id': item['id'],
-             'name': self.get_label(item, lang),
-             'description': item.get('description'),
-            }
-            for item in search_results]
-        return {'result':result}
+            result = [
+                {
+                'id': item['id'],
+                'name': self.get_label(item, lang),
+                'description': item.get('description'),
+                }
+                for item in search_results]
+            return {'result':result}
 
-    def find_type(self, args):
-        return self.find_something(args)
+    async def find_type(self, args):
+        return await self.find_something(args)
 
-    def find_property(self, args):
+    async def find_property(self, args):
         # Check first if we are dealing with a path
         s = (args.get('prefix') or '').strip()
 
@@ -170,31 +165,31 @@ class SuggestEngine(object):
             pass
 
         # search for simple properties
-        search_results =  self.find_something(args, 'property', "Property:")['result']
+        search_results = (await self.find_something(args, 'property', "Property:"))['result']
         return {'result':sparql_match + search_results}
 
-    def flyout_type(self, args):
-        return self.flyout(args)
+    async def flyout_type(self, args):
+        return await self.flyout(args)
 
-    def flyout_entity(self, args):
-        return self.flyout(args)
+    async def flyout_entity(self, args):
+        return await self.flyout(args)
 
-    def flyout_property(self, args):
-        return self.flyout(args)
+    async def flyout_property(self, args):
+        return await self.flyout(args)
 
-    def flyout(self, args):
+    async def flyout(self, args):
         id = args.get('id')
         lang = args.get('lang', 'en')
         html = None
         if id:
-            item = self.store.get_item(id)
-            html = '<p style="font-size: 0.8em; color: black;">%s</p>' % self.get_description(item, lang)
+            item = await self.store.get_item(id)
+            html = '<p style="font-size: 0.8em; color: black;">%s</p>' % (await self.get_description(item, lang))
         return {'id':id, 'html':html}
 
-    def find_entity(self, args):
-        return self.find_something(args)
+    async def find_entity(self, args):
+        return await self.find_something(args)
 
-    def propose_properties(self, args):
+    async def propose_properties(self, args):
         """
         This method proposes properties to be fetched
         for a column reconcilied against a particular type (or none)
@@ -219,7 +214,8 @@ class SuggestEngine(object):
             identifier_space=identifier_space,
             schema_space=schema_space,
         )
-        results = sparql_wikidata(sparql_query)
+        results = await sparql_wikidata(self.http_session, sparql_query)
+        print(results)
 
         properties = []
 

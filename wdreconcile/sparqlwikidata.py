@@ -1,4 +1,3 @@
-import requests
 import config
 
 async def sparql_wikidata(http_session, query_string):

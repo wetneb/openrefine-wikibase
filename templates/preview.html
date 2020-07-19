@@ -1,15 +1,15 @@
 <html><head><meta charset="utf-8" /></head>
 <body style="margin: 0px; font-family: Arial; sans-serif">
 <div style="height: {{height}}px; width: {{width}}px; overflow: hidden; font-size: 0.7em">
-% if image:
+{% if image %}
 <div style="width: 100px; text-align: center; overflow: hidden;
 margin-right: 9px; float: left">
    <img src="{{image[0]}}" alt="{{image[1]}}" style="height: 100px" />
 </div>
-% end
+{% endif %}
 <div style="margin-left: 3px;">
 <a href="{{url}}" target="_blank" style="text-decoration: none;">{{label}}</a> <span style="color: #505050;">({{id}})</span>
-<p>{{description}}</p>
+<p>{{description|safe}}</p>
 </div>
 </div>
 </body>
