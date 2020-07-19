@@ -1,4 +1,5 @@
 import aiohttp
+import asyncio
 import json
 from .language import language_fallback
 from .sitelink import SitelinkFetcher
@@ -16,6 +17,7 @@ class ItemStore(object):
         self.ttl = 60*60 # one hour
         self.max_items_per_fetch = 50 # constraint from the Wikidata API
         self.sitelink_fetcher = SitelinkFetcher(redis_client, http_session)
+        self.local_cache = {}
 
     async def get_item(self, qid, force=False):
         """
@@ -46,6 +48,26 @@ class ItemStore(object):
         if type(qids) != list:
             qids = list(qids)
 
+        result = {}
+        if force:
+            to_fetch = qids
+        else:
+            to_fetch = []
+            for qid in qids:
+                if qid in self.local_cache:
+                    result[qid] = self.local_cache[qid]
+                else:
+                    to_fetch.append(qid)
+
+        fetched = await self._get_items_redis(qids, force)
+        self.local_cache.update(fetched)
+        result.update(fetched)
+        return result
+
+    async def _get_items_redis(self, qids, force=False):
+        """
+        Redis-cached version of _fetch_items
+        """
         result = {}
         to_fetch = set()
 
@@ -90,22 +112,28 @@ class ItemStore(object):
         if type(qids) != list:
             qids = list(qids)
 
-        first_batch = qids[:self.max_items_per_fetch]
+        batch_results = await asyncio.gather(*[
+            self._fetch_item_batch(qids[i:i+self.max_items_per_fetch])
+            for i in range(0, len(qids), self.max_items_per_fetch)
+        ])
+        results = {}
+        for batch_result in batch_results:
+            results.update(batch_result)
+        return results
+
+    async def _fetch_item_batch(self, qid_batch):
+        """
+        Fetches a single batch of items from the Wikibase API
+        """
         async with self.http_session.get(mediawiki_api_endpoint,
                 params={'action':'wbgetentities',
                 'format':'json',
                 'props':'aliases|labels|descriptions|claims|sitelinks',
-                'ids':'|'.join(first_batch)},
+                'ids':'|'.join(qid_batch)},
                 headers={'User-Agent':user_agent},
                 raise_for_status=True) as r:
             resp = await r.json()
-            first_items = resp.get('entities', {})
-            if len(qids) > self.max_items_per_fetch:
-                remaining = qids[self.max_items_per_fetch:]
-                first_items.update(await self._fetch_items(remaining))
-
-            return first_items
-
+            return resp.get('entities', {})
 
     def minify_item(self, item):
         """

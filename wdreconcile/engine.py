@@ -1,8 +1,9 @@
 import config
-import requests
 import itertools
 import re
 import json
+import asyncio
+import time
 from collections import defaultdict
 
 from .itemstore import ItemStore
@@ -37,6 +38,12 @@ class ReconcileEngine(object):
         """
         if not query_string.strip():
             return []
+        [search_results, autocomplete_results] = await asyncio.gather(
+            self._srsearch(query_string, num_results),
+            self._wbsearchentities(query_string, num_results, default_language))
+        return search_results + autocomplete_results
+
+    async def _srsearch(self, query_string, num_results):
         async with self.http_session.get(
                 config.mediawiki_api_endpoint,
                 params={'action':'query',
@@ -49,7 +56,9 @@ class ReconcileEngine(object):
                 headers=config.headers) as r:
             resp = await r.json()
             # NOTE: remove the wikibase namespace prefix to only get the QID
-            search_results = [item['title'][len(config.wikibase_namespace_prefix):] for item in resp.get('query', {}).get('search', [])]
+            return [item['title'][len(config.wikibase_namespace_prefix):] for item in resp.get('query', {}).get('search', [])]
+
+    async def _wbsearchentities(self, query_string, num_results, default_language):
         async with self.http_session.get(
                 config.mediawiki_api_endpoint,
                 params={'action':'wbsearchentities',
@@ -59,9 +68,7 @@ class ReconcileEngine(object):
                 'search':query_string},
                 headers=config.headers) as r:
             resp = await r.json()
-            autocomplete_results = [item['id'] for item in resp.get('search', [])]
-
-        return search_results + autocomplete_results
+            return [item['id'] for item in resp.get('search', [])]
 
     async def prepare_property(self, prop, detect_unique_id=True):
         """
@@ -83,6 +90,43 @@ class ReconcileEngine(object):
             prop['unique_id'] = await path.is_unique_identifier()
         return prop
 
+    async def fetch_candidate_ids(self, query, unique_id_to_qid, sitelinks_to_qids, default_language):
+        # First, see if any qids can be fetched by primary id
+        primary_qids_and_labels = []
+        for prop in query['properties']:
+            if prop['unique_id']:
+                primary_qids_and_labels += unique_id_to_qid.get(
+                    prop['path'], {}).get(
+                    prop['v'], [])
+
+        if primary_qids_and_labels:
+            # for now we're throwing away the labels
+            # returned by the SPARQL query. Ideally we
+            # could keep them to avoid fetching these items.
+            return [qid for qid, _ in primary_qids_and_labels]
+
+        # Otherwise, use the text query
+        if 'query' not in query:
+            raise ValueError('No "query" provided')
+        num_results = int(query.get('limit') or config.default_num_results)
+        num_results_before_filter = min([2*num_results, config.wd_api_max_search_results])
+
+        # If the text query is actually a QID, just return the QID itself
+        # (same for sitelinks, but with conversion)
+        query_as_qid = to_q(query['query'])
+        query_as_sitelink = SitelinkFetcher.normalize(query['query'])
+        qid_from_sitelink = None
+        if query_as_sitelink:
+            qid_from_sitelink = sitelinks_to_qids.get(query_as_sitelink)
+        if query_as_qid:
+            return [query_as_qid]
+        elif qid_from_sitelink:
+            return [qid_from_sitelink]
+        else: # otherwise just search for the string with the WD API
+            return await self.wikibase_string_search(query['query'],
+                                num_results_before_filter, default_language)
+
+
     async def process_queries(self, queries, default_language='en'):
         """
         This contains the backbone of the reconciliation algorithm.
@@ -92,6 +136,7 @@ class ReconcileEngine(object):
         - Otherwise, do a string search for candidates,
           filter them and rank them.
         """
+
         # Prepare all properties
         for query_id in queries:
             prepared_properties = []
@@ -124,45 +169,14 @@ class ReconcileEngine(object):
         # Fetch all candidate qids for each query
         qids = {}
         qids_to_prefetch = set()
-        for query_id, query in queries.items():
-            # First, see if any qids can be fetched by primary id
-            primary_qids_and_labels = []
-            for prop in query['properties']:
-                if prop['unique_id']:
-                    primary_qids_and_labels += unique_id_to_qid.get(
-                        prop['path'], {}).get(
-                        prop['v'], [])
-
-            if primary_qids_and_labels:
-                # for now we're throwing away the labels
-                # returned by the SPARQL query. Ideally we
-                # could keep them to avoid fetching these items.
-                qids[query_id] = [qid for qid, _ in primary_qids_and_labels]
-                qids_to_prefetch |= set(qids[query_id])
-                continue
-
-            # Otherwise, use the text query
-            if 'query' not in query:
-                raise ValueError('No "query" provided')
-            num_results = int(query.get('limit') or config.default_num_results)
-            num_results_before_filter = min([2*num_results, config.wd_api_max_search_results])
-
-            # If the text query is actually a QID, just return the QID itself
-            # (same for sitelinks, but with conversion)
-            query_as_qid = to_q(query['query'])
-            query_as_sitelink = SitelinkFetcher.normalize(query['query'])
-            qid_from_sitelink = None
-            if query_as_sitelink:
-                qid_from_sitelink = sitelinks_to_qids.get(query_as_sitelink)
-            if query_as_qid:
-                qids[query_id] = [query_as_qid]
-            elif qid_from_sitelink:
-                qids[query_id] = [qid_from_sitelink]
-            else: # otherwise just search for the string with the WD API
-                qids[query_id] = await self.wikibase_string_search(query['query'],
-                                    num_results_before_filter, default_language)
-
-            qids_to_prefetch |= set(qids[query_id])
+        queries_with_ids = queries.items()
+        candidates = await asyncio.gather(*[
+            self.fetch_candidate_ids(query, unique_id_to_qid, sitelinks_to_qids, default_language)
+            for query_id, query in queries_with_ids
+        ])
+        for i, (query_id, query) in enumerate(queries_with_ids):
+            qids[query_id] = candidates[i]
+            qids_to_prefetch |= set(candidates[i])
 
         # Prefetch all items
         await self.item_store.get_items(qids_to_prefetch)

@@ -14,6 +14,7 @@ class TypeMatcher(object):
         self.http_session = http_session
         self.prefix = config.redis_key_prefix+':children'
         self.ttl = 24*60*60 # 1 day
+        self.local_cache = {}
 
     async def is_subclass(self, qid_1, qid_2):
         """
@@ -27,8 +28,14 @@ class TypeMatcher(object):
         the class via the "subclass of" (P279)
         relation.
         """
+        cache_key = qid_1+'_'+qid_2
+        cache_hit = self.local_cache.get(cache_key)
+        if cache_hit is not None:
+            return cache_hit
         await self.prefetch_children(qid_2)
-        return await self.r.sismember(self._key_name(qid_2), qid_1)
+        result =  await self.r.sismember(self._key_name(qid_2), qid_1)
+        self.local_cache[cache_key] = result
+        return result
 
     async def prefetch_children(self, qid, force=False):
         """
