@@ -1,9 +1,12 @@
 
-import bottle
+
 import json
 import time
+import aiohttp
+import aioredis
 
-from bottle import route, run, request, default_app, template, HTTPError, abort, HTTPResponse, hook, response
+from quart import Quart, render_template, request, g
+from quart_cors import cors
 from docopt import docopt
 from wdreconcile.engine import ReconcileEngine
 from wdreconcile.suggest import SuggestEngine
@@ -11,25 +14,40 @@ from wdreconcile.monitoring import Monitoring
 
 from config import *
 
-# TODO wire this up
-http_session = None
-reconcile = ReconcileEngine(redis_client, http_session)
-suggest = SuggestEngine(redis_client, http_session)
-monitoring = Monitoring(redis_client)
+app = Quart(__name__, static_url_path='/static/', static_folder='static/')
+app = cors(app, allow_origin='*')
+
+@app.before_serving
+async def setup():
+    app.redis_client = await aioredis.create_redis_pool(redis_uri)
+    app.http_session_obj = aiohttp.ClientSession()
+    app.http_session = await app.http_session_obj.__aenter__()
+
+@app.before_request
+async def request_context():
+    g.reconcile = ReconcileEngine(app.redis_client, app.http_session)
+    g.suggest = SuggestEngine(app.redis_client, app.http_session)
+    g.monitoring = Monitoring(app.redis_client)
+
+@app.after_serving
+async def teardown():
+    await app.http_session.__aexit__(None, None, None)
+    app.redis_client.close()
+    await app.redis_client.wait_closed()
 
 def jsonp(view):
-    def wrapped(*posargs, **kwargs):
+    async def wrapped(*posargs, **kwargs):
         args = {}
         # if we access the args via get(),
         # we can get encoding errors...
-        for k in request.forms:
-            args[k] = getattr(request.forms, k)
-        for k in request.query:
-            args[k] = getattr(request.query, k)
+        for k in await request.form:
+            args[k] = request.form.get(k)
+        for k in request.args:
+            args[k] = request.args.get(k)
         callback = args.get('callback')
         status_code = 200
         try:
-            result = view(args, *posargs, **kwargs)
+            result = await view(args, *posargs, **kwargs)
         except (Exception) as e:#ValueError, AttributeError, KeyError) as e:
             import traceback, sys
             traceback.print_exc(file=sys.stdout)
@@ -44,24 +62,24 @@ def jsonp(view):
             return result
         else:
             result['arguments'] = args
-            return HTTPResponse(result, status=status_code)
+            return result, status_code
 
     return wrapped
 
-@route('/api', method=['GET','POST'])
+@app.route('/api', endpoint='api-default-lang', methods=['GET','POST'])
 @jsonp
-def api_default_lang(args):
+async def api_default_lang(args):
     if 'lang' not in args:
         args['lang'] = 'en'
-    return api(args)
+    return await api(args)
 
-@route('/<lang>/api', method=['GET','POST'])
+@app.route('/<lang>/api', endpoint='api', methods=['GET','POST'])
 @jsonp
-def api_custom_lang(args, lang):
+async def api_custom_lang(args, lang):
     args['lang'] = lang
-    return api(args)
+    return await api(args)
 
-def api(args):
+async def api(args):
     query = args.get('query')
     queries = args.get('queries')
     extend = args.get('extend')
@@ -73,23 +91,23 @@ def api(args):
        	    query = json.loads(query)
         except ValueError:
             query = {'query':query}
-        result = reconcile.process_single_query(query,
+        result = await g.reconcile.process_single_query(query,
                 default_language=lang)
         processing_time = time.time() - start_time
-        monitoring.log_request(1, processing_time)
+        await g.monitoring.log_request(1, processing_time)
         return result
 
     elif queries:
         queries = json.loads(queries)
-        res = reconcile.process_queries(queries,
+        res = await g.reconcile.process_queries(queries,
                 default_language=lang)
         processing_time = time.time() - start_time
-        monitoring.log_request(len(queries), processing_time)
+        await g.monitoring.log_request(len(queries), processing_time)
         return res
 
     elif extend:
         args['extend'] = json.loads(extend)
-        return reconcile.fetch_properties_by_batch(args)
+        return await g.reconcile.fetch_properties_by_batch(args)
 
     else:
         identify = {
@@ -122,7 +140,7 @@ def api(args):
             'defaultTypes': [
                 {
                     'id': default_type_entity,
-                    'name': reconcile.item_store.get_label(default_type_entity, lang)
+                    'name': await g.reconcile.item_store.get_label(default_type_entity, lang)
                 }
             ],
             'extend' : {
@@ -193,121 +211,114 @@ def api(args):
         return identify
 
 
-@route('/suggest/type', method=['GET','POST'])
+@app.route('/suggest/type', endpoint='suggest-type-default-lang', methods=['GET','POST'])
 @jsonp
-def suggest_property(args):
+async def suggest_property(args):
     args['lang'] = fix_lang(args.get('lang'))
     return suggest.find_type(args)
 
-@route('/suggest/property', method=['GET','POST'])
+@app.route('/suggest/property', endpoint='suggest-property-default-lang', methods=['GET','POST'])
 @jsonp
-def suggest_property(args):
+async def suggest_property(args):
     args['lang'] = fix_lang(args.get('lang'))
     return suggest.find_property(args)
 
-@route('/suggest/entity', method=['GET','POST'])
+@app.route('/suggest/entity', endpoint='suggest-entity-default-lang', methods=['GET','POST'])
 @jsonp
-def suggest_property(args):
+async def suggest_property(args):
     args['lang'] = fix_lang(args.get('lang'))
     return suggest.find_entity(args)
 
-@route('/preview', method=['GET','POST'])
+@app.route('/preview', endpoint='preview-default-lang', methods=['GET','POST'])
 @jsonp
-def preview(args):
+async def preview(args):
     args['lang'] = fix_lang(args.get('lang'))
     return suggest.preview(args)
 
-@route('/<lang>/suggest/type', method=['GET','POST'])
+@app.route('/<lang>/suggest/type', endpoint='suggest-type', methods=['GET','POST'])
 @jsonp
-def suggest_type(args, lang):
+async def suggest_type(args, lang):
     args['lang'] = fix_lang(lang)
     return suggest.find_type(args)
 
-@route('/<lang>/suggest/property', method=['GET','POST'])
+@app.route('/<lang>/suggest/property', endpoint='suggest-property', methods=['GET','POST'])
 @jsonp
-def suggest_property(args, lang):
+async def suggest_property(args, lang):
     args['lang'] = fix_lang(lang)
     return suggest.find_property(args)
 
-@route('/<lang>/suggest/entity', method=['GET','POST'])
+@app.route('/<lang>/suggest/entity', endpoint='suggest-entity', methods=['GET','POST'])
 @jsonp
-def suggest_entity(args, lang):
+async def suggest_entity(args, lang):
     args['lang'] = fix_lang(lang)
     return suggest.find_entity(args)
 
-@route('/<lang>/flyout/type', method=['GET','POST'])
+@app.route('/<lang>/flyout/type', endpoint='flyout-type', methods=['GET','POST'])
 @jsonp
-def flyout_type(args, lang):
+async def flyout_type(args, lang):
     args['lang'] = fix_lang(lang)
     return suggest.flyout_type(args)
 
-@route('/<lang>/flyout/property', method=['GET','POST'])
+@app.route('/<lang>/flyout/property', endpoint='flyout-property', methods=['GET','POST'])
 @jsonp
-def flyout_property(args, lang):
+async def flyout_property(args, lang):
     args['lang'] = fix_lang(lang)
     return suggest.flyout_property(args)
 
-@route('/<lang>/flyout/entity', method=['GET','POST'])
+@app.route('/<lang>/flyout/entity', endpoint='flyout-entity', methods=['GET','POST'])
 @jsonp
-def flyout_entity(args, lang):
+async def flyout_entity(args, lang):
     args['lang'] = fix_lang(lang)
     return suggest.flyout_entity(args)
 
-
-
-@route('/<lang>/preview', method=['GET','POST'])
+@app.route('/<lang>/preview', endpoint='preview', methods=['GET','POST'])
 @jsonp
-def preview(args, lang):
+async def preview(args, lang):
     args['lang'] = fix_lang(lang)
     return suggest.preview(args)
 
-@route('/fetch_values', method=['GET','POST'])
+@app.route('/fetch_values', endpoint='fetch-values-default-lang', methods=['GET','POST'])
 @jsonp
-def fetch_values(args):
+async def fetch_values(args):
     args['lang'] = fix_lang(args.get('lang'))
     return reconcile.fetch_values(args)
 
-@route('/<lang>/fetch_values', method=['GET','POST'])
+@app.route('/<lang>/fetch_values', endpoint='fetch-values', methods=['GET','POST'])
 @jsonp
-def fetch_values(args, lang):
+async def fetch_values(args, lang):
     args['lang'] = fix_lang(lang)
     return reconcile.fetch_values(args)
 
-@route('/<lang>/propose_properties', method=['GET','POST'])
+@app.route('/<lang>/propose_properties', endpoint='propose-properties', methods=['GET','POST'])
 @jsonp
-def propose_properties(args, lang):
+async def propose_properties(args, lang):
     args['lang'] = fix_lang(lang)
     return suggest.propose_properties(args)
 
-@route('/<lang>/fetch_property_by_batch', method=['GET','POST'])
+@app.route('/<lang>/fetch_property_by_batch', endpoint='fetch-property-batch', methods=['GET','POST'])
 @jsonp
-def fetch_property_by_batch(args, lang):
+async def fetch_property_by_batch(args, lang):
     args['lang'] = fix_lang(lang)
     return reconcile.fetch_property_by_batch(args)
 
-@route('/<lang>/fetch_properties_by_batch', method=['GET','POST'])
+@app.route('/<lang>/fetch_properties_by_batch', endpoint='fetch-properties-batch', methods=['GET','POST'])
 @jsonp
-def fetch_property_by_batch(args, lang):
+async def fetch_property_by_batch(args, lang):
     args['lang'] = fix_lang(lang)
     args['extend'] = json.loads(args.get('extend', '{}'))
     return reconcile.fetch_properties_by_batch(args)
 
-@route('/')
-def home():
-    with open('templates/index.html', 'r') as f:
-        context = {
-            'service_status_url': this_host+'/monitoring',
-            'endpoint_url': this_host+'/en/api',
-        }
-        return template(f.read(), **context)
+@app.route('/', endpoint='home')
+async def home():
+    context = {
+        'service_status_url': this_host+'/monitoring',
+        'endpoint_url': this_host+'/en/api',
+    }
+    return await render_template('index.html', **context)
 
-@route('/static/<fname>')
-def static(fname):
-    return bottle.static_file(fname, root='static/')
-
-@route('/monitoring')
-def monitor():
-    return {'stats':monitoring.get_rates()}
+@app.route('/monitoring')
+async def monitor():
+    return {'stats': await g.monitoring.get_rates()}
 
 def fix_lang(lng):
     if not lng:
@@ -316,15 +327,6 @@ def fix_lang(lng):
         return 'ja'
     return lng
 
-@hook('after_request')
-def add_cors_headers():
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
-    response.headers['Access-Control-Allow-Origin'] = '*'
-
 if __name__ == '__main__':
-    run(host='0.0.0.0', port=8000, debug=True)
-
-app = application = default_app()
-
+    app.run(debug=True)
 
