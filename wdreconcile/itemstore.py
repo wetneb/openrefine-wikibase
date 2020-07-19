@@ -1,4 +1,4 @@
-import requests
+import aiohttp
 import json
 from .language import language_fallback
 from .sitelink import SitelinkFetcher
@@ -9,30 +9,31 @@ class ItemStore(object):
     An interface that caches minified versions
     of Wikidata items.
     """
-    def __init__(self, redis_client):
+    def __init__(self, redis_client, http_session):
+        self.http_session = http_session
         self.r = redis_client
         self.prefix = redis_key_prefix+'items'
         self.ttl = 60*60 # one hour
         self.max_items_per_fetch = 50 # constraint from the Wikidata API
-        self.sitelink_fetcher = SitelinkFetcher(redis_client)
+        self.sitelink_fetcher = SitelinkFetcher(redis_client, http_session)
 
-    def get_item(self, qid, force=False):
+    async def get_item(self, qid, force=False):
         """
         Get a single minified item from Wikidata (this is cached).
         It is more efficient to use get_items if you know in advance
         that you will fetch more items.
         """
-        result = self.get_items([qid], force=force)
+        result = await self.get_items([qid], force=force)
         return result[qid]
 
-    def get_label(self, qid, lang):
+    async def get_label(self, qid, lang):
         """
         Shortcut to get the label of an item for a specific language
         """
-        item = self.get_item(qid)
+        item = await self.get_item(qid)
         return language_fallback(item.get('labels', {}), lang) or qid
 
-    def get_items(self, qids, force=False):
+    async def get_items(self, qids, force=False):
         """
         Fetch minified items from the Wikidata API, or retrieve them
         from the cache.
@@ -52,7 +53,7 @@ class ItemStore(object):
             to_fetch = set(qids)
         else:
             # Retrieve values that are already in the cache
-            current_values = self.r.mget([
+            current_values = await self.r.mget(*[
                 self._key_for_qid(qid)
                 for qid in qids])
             for i, v in enumerate(current_values):
@@ -64,22 +65,22 @@ class ItemStore(object):
         if not to_fetch:
             return result
 
-        items = self._fetch_items(to_fetch)
+        items = await self._fetch_items(to_fetch)
 
         fetched = {}
         for qid, item in items.items():
             fetched[qid] = self.minify_item(item)
 
         if fetched:
-            self.r.mset({self._key_for_qid(qid) : json.dumps(v)
+            await self.r.mset({self._key_for_qid(qid) : json.dumps(v)
                          for qid, v in fetched.items()})
         for qid in fetched:
-            self.r.expire(self._key_for_qid(qid), self.ttl)
+            await self.r.expire(self._key_for_qid(qid), self.ttl)
 
         result.update(fetched)
         return result
 
-    def _fetch_items(self, qids):
+    async def _fetch_items(self, qids):
         """
         Internal helper, calling the API with batches of the right
         length
@@ -90,21 +91,20 @@ class ItemStore(object):
             qids = list(qids)
 
         first_batch = qids[:self.max_items_per_fetch]
-        r = requests.get(mediawiki_api_endpoint,
-            {'action':'wbgetentities',
-            'format':'json',
-            'props':'aliases|labels|descriptions|claims|sitelinks',
-            'ids':'|'.join(first_batch)},
-            headers={'User-Agent':user_agent})
-        r.raise_for_status()
-        resp = r.json()
+        async with self.http_session.get(mediawiki_api_endpoint,
+                params={'action':'wbgetentities',
+                'format':'json',
+                'props':'aliases|labels|descriptions|claims|sitelinks',
+                'ids':'|'.join(first_batch)},
+                headers={'User-Agent':user_agent},
+                raise_for_status=True) as r:
+            resp = await r.json()
+            first_items = resp.get('entities', {})
+            if len(qids) > self.max_items_per_fetch:
+                remaining = qids[self.max_items_per_fetch:]
+                first_items.update(self._fetch_items(remaining))
 
-        first_items = resp.get('entities', {})
-        if len(qids) > self.max_items_per_fetch:
-            remaining = qids[self.max_items_per_fetch:]
-            first_items.update(self._fetch_items(remaining))
-
-        return first_items
+            return first_items
 
 
     def minify_item(self, item):

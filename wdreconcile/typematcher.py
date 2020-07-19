@@ -9,12 +9,13 @@ class TypeMatcher(object):
     Cached using Redis sets, with expiration.
     """
 
-    def __init__(self, redis_client):
+    def __init__(self, redis_client, http_session):
         self.r = redis_client
+        self.http_session = http_session
         self.prefix = config.redis_key_prefix+':children'
         self.ttl = 24*60*60 # 1 day
 
-    def is_subclass(self, qid_1, qid_2):
+    async def is_subclass(self, qid_1, qid_2):
         """
         Checks if the Wikidata item designated by
         the first QID is a subclass of the second.
@@ -26,27 +27,29 @@ class TypeMatcher(object):
         the class via the "subclass of" (P279)
         relation.
         """
-        self.prefetch_children(qid_2)
-        return self.r.sismember(self._key_name(qid_2), qid_1)
+        await self.prefetch_children(qid_2)
+        return await self.r.sismember(self._key_name(qid_2), qid_1)
 
-    def prefetch_children(self, qid, force=False):
+    async def prefetch_children(self, qid, force=False):
         """
         Prefetches (in Redis) all the children of a given class
         """
         key_name = self._key_name(qid)
 
-        if self.r.exists(key_name):
+        if await self.r.exists(key_name):
             return # children are already prefetched
 
-        sparql_query = Template(config.sparql_query_to_fetch_subclasses).substitute(qid=qid)
-        results = sparql_wikidata(sparql_query)
-
-        for result in results["bindings"]:
-            child_qid = to_q(result["child"]["value"])
-            self.r.sadd(key_name, child_qid)
+        for child_qid in await self._fetch_children(qid):
+            await self.r.sadd(key_name, child_qid)
 
         # set expiration
-        self.r.expire(key_name, self.ttl)
+        await self.r.expire(key_name, self.ttl)
+
+    async def _fetch_children(self, qid):
+        sparql_query = Template(config.sparql_query_to_fetch_subclasses).substitute(qid=qid)
+        results = await sparql_wikidata(self.http_session, sparql_query)
+        return [to_q(result['child']['value'])
+            for result in results["bindings"]]
 
     def _key_name(self, qid):
         return ':'.join([self.prefix, qid])

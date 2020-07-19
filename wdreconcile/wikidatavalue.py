@@ -22,7 +22,7 @@ class WikidataValue(object):
     def __init__(self, **json):
         self.json = json
 
-    def match_with_str(self, s, item_store):
+    async def match_with_str(self, s, item_store):
         """
         Given a string s (the target reconciliation value),
         return a matching score with the WikidataValue.
@@ -63,7 +63,7 @@ class WikidataValue(object):
         """
         raise NotImplemented
 
-    def as_openrefine_cell(self, lang, item_store):
+    async def as_openrefine_cell(self, lang, item_store):
         """
         Returns a JSON representation for the
         OpenRefine extend API.
@@ -75,9 +75,9 @@ class WikidataValue(object):
         """
         if self.is_novalue():
             return {}
-        return self._as_cell(lang, item_store)
+        return await self._as_cell(lang, item_store)
 
-    def _as_cell(self, lang, item_store):
+    async def _as_cell(self, lang, item_store):
         """
         This method can assume that the value is not a novalue
 
@@ -129,7 +129,7 @@ class ItemValue(WikidataValue):
         else:
             return ItemValue(id=v['id'])
 
-    def match_with_str(self, s, item_store):
+    async def match_with_str(self, s, item_store):
         # Novalue / somevalue case
         if 'id' not in self.json:
             return 0
@@ -141,8 +141,8 @@ class ItemValue(WikidataValue):
         # Then check for a sitelink
         sitelink = SitelinkFetcher.normalize(s)
         if sitelink:
-            target_qid = item_store.sitelink_fetcher.sitelinks_to_qids(
-                [sitelink]).get(sitelink)
+            target_qid = (await item_store.sitelink_fetcher.sitelinks_to_qids(
+                [sitelink])).get(sitelink)
             return 100 if target_qid == self.id else 0
 
         # Then check for a novalue match
@@ -151,7 +151,7 @@ class ItemValue(WikidataValue):
 
         # Otherwise try to match the string to the labels and
         # aliases of the item.
-        item = item_store.get_item(self.id)
+        item = await item_store.get_item(self.id)
         labels = list(item.get('labels', {}).values())
         aliases = item.get('aliases', [])
         matching_scores = [
@@ -166,11 +166,11 @@ class ItemValue(WikidataValue):
     def as_string():
         return self.json.get('id', '')
 
-    def _as_cell(self, lang, item_store):
+    async def _as_cell(self, lang, item_store):
         if 'id' in self.json:
             return {
                 'id': self.id,
-                'name': item_store.get_label(self.id, lang),
+                'name': await item_store.get_label(self.id, lang),
             }
         else:
             return None
@@ -215,7 +215,7 @@ class UrlValue(WikidataValue):
     def from_datavalue(self, wd_repr):
         return UrlValue(value=wd_repr.get('value', {}))
 
-    def match_with_str(self, s, item_store):
+    async def match_with_str(self, s, item_store):
         # no value
         if self.parsed is None:
             return 0
@@ -232,7 +232,7 @@ class UrlValue(WikidataValue):
     def as_string(self):
         return self.json.get('value', '')
 
-    def _as_cell(self, lang, item_store):
+    async def _as_cell(self, lang, item_store):
         return {
             'str': self.value
         }
@@ -246,11 +246,6 @@ class CoordsValue(WikidataValue):
     - altitude (float)
     - precision (float)
     - globe (string)
-
-    >>> int(CoordsValue(latitude=53.3175,longitude=-4.6204).match_with_str("53.3175,-4.6204", None))
-    100
-    >>> int(CoordsValue(latitude=53.3175,longitude=-4.6204).match_with_str("53.3175,-5.6204", None))
-    0
     """
     value_type = "globe-coordinate"
 
@@ -258,7 +253,7 @@ class CoordsValue(WikidataValue):
     def from_datavalue(self, wd_repr):
         return CoordsValue(**wd_repr.get('value', {}))
 
-    def match_with_str(self, s, item_store):
+    async def match_with_str(self, s, item_store):
         # parse the string as coordinates
         parts = s.split(',')
         if len(parts) != 2:
@@ -282,7 +277,7 @@ class CoordsValue(WikidataValue):
     def as_string(self):
         return str(self.json.get('latitude', ''))+','+str(self.json.get('longitude', ''))
 
-    def _as_cell(self, lang, item_store):
+    async def _as_cell(self, lang, item_store):
         return {
             'str': self.as_string()
         }
@@ -300,7 +295,7 @@ class StringValue(WikidataValue):
         return cls(
                 value=wd_repr.get('value', {}))
 
-    def match_with_str(self, s, item_store):
+    async def match_with_str(self, s, item_store):
         ref_val = self.json.get('value')
         if not ref_val:
             return 0
@@ -309,7 +304,7 @@ class StringValue(WikidataValue):
     def as_string(self):
         return self.json.get('value', '')
 
-    def _as_cell(self, lang, item_store):
+    async def _as_cell(self, lang, item_store):
         return {
             'str': self.value
         }
@@ -323,7 +318,7 @@ class IdentifierValue(StringValue):
     """
     value_type = "external-id"
 
-    def match_with_str(self, s, item_store):
+    async def match_with_str(self, s, item_store):
         return 100 if s.strip() == self.value else 0
 
 @register
@@ -345,7 +340,7 @@ class QuantityValue(WikidataValue):
     def from_datavalue(cls, wd_repr):
         return cls(**wd_repr.get('value', {}))
 
-    def match_with_str(self, s, item_store):
+    async def match_with_str(self, s, item_store):
         try:
             f = float(s)
             if self.amount is not None:
@@ -360,7 +355,7 @@ class QuantityValue(WikidataValue):
     def is_novalue(self):
         return self.amount is None
 
-    def _as_cell(self, lang, item_store):
+    async def _as_cell(self, lang, item_store):
         return {
             'float': self.amount
         }
@@ -378,7 +373,7 @@ class MonolingualValue(WikidataValue):
     def from_datavalue(cls, wd_repr):
         return cls(**(wd_repr.get('value') or {}))
 
-    def match_with_str(self, s, item_store):
+    async def match_with_str(self, s, item_store):
         ref_val = self.json.get('text')
         if not ref_val:
             return 0
@@ -387,7 +382,7 @@ class MonolingualValue(WikidataValue):
     def as_string(self):
         return self.json.get('text') or ''
 
-    def _as_cell(self, lang, item_store):
+    async def _as_cell(self, lang, item_store):
         return {
             'str': self.text
         }
@@ -423,7 +418,7 @@ class TimeValue(WikidataValue):
     def from_datavalue(cls, wd_repr):
         return cls(**wd_repr.get('value', {}))
 
-    def match_with_str(self, s, item_store):
+    async def match_with_str(self, s, item_store):
         # TODO convert to a timestamp
         # TODO compute difference
         # TODO convert to a ratio based on the precision
@@ -450,7 +445,7 @@ class TimeValue(WikidataValue):
     def is_novalue(self):
         return self.parsed is None
 
-    def _as_cell(self, lang, item_store):
+    async def _as_cell(self, lang, item_store):
         if self.parsed:
             return {
                 'date': self.parsed.isoformat()
@@ -490,7 +485,7 @@ class UndefinedValue(WikidataValue):
     def from_datavalue(cls, wd_repr):
         return cls()
 
-    def match_with_str(self, s, item_store):
+    async def match_with_str(self, s, item_store):
         return 0
 
     def is_novalue(self):
@@ -499,5 +494,5 @@ class UndefinedValue(WikidataValue):
     def as_string(self):
         return ""
 
-    def _as_cell(self, lang, item_store):
+    async def _as_cell(self, lang, item_store):
         return {}
