@@ -102,7 +102,7 @@ class ItemStore(object):
             first_items = resp.get('entities', {})
             if len(qids) > self.max_items_per_fetch:
                 remaining = qids[self.max_items_per_fetch:]
-                first_items.update(self._fetch_items(remaining))
+                first_items.update(await self._fetch_items(remaining))
 
             return first_items
 

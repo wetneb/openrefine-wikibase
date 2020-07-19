@@ -4,14 +4,11 @@ aiodns
 aioresponses
 pytest
 pytest-mock
-
-requests
+quart
+quart-cors
 docopt
-bottle
 fuzzywuzzy
 python-Levenshtein
-redis
-requests_mock # for testing
 unidecode
 funcparserlib
 python_dateutil
