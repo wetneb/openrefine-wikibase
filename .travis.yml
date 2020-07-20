@@ -1,9 +1,3 @@
-#   A basic travis.yml boilerplate for Django projects
-#
-#   The set-up assumes a postgreSQL database.
-#
-# Taken from https://gist.github.com/ndarville/3625246
-
 language: python
 
 
