@@ -4,6 +4,7 @@ aiodns
 aioresponses
 pytest
 pytest-mock
+pytest-asyncio
 quart
 quart-cors
 docopt
