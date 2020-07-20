@@ -3,7 +3,7 @@ Wikibase reconciliation interface for OpenRefine
 [![Build Status](https://travis-ci.org/wetneb/openrefine-wikibase.svg?branch=master)](https://travis-ci.org/wetneb/openrefine-wikibase) [![Coverage Status](https://coveralls.io/repos/github/wetneb/openrefine-wikidata/badge.svg?branch=master)](https://coveralls.io/github/wetneb/openrefine-wikidata?branch=master)
 
 An instance of this endpoint for Wikidata can be found at:
-https://wdreconcile.toolforge.org/en/api
+https://wikidata.reconci.link/en/api
 
 This is a new reconciliation interface, with the following features:
 * Matching columns with Wikibase properties, to improve the fuzzy
@@ -13,11 +13,6 @@ This is a new reconciliation interface, with the following features:
 * Language selection (use /$lng/api as endpoint, where $lng is your
   language code) ;
 * Reconciliation from sitelinks (Wikipedia in the case of Wikidata).
-
-TODO (Pull requests welcome!)
-* Better scoring ;
-* Web-based interface ;
-* More optimization for speed.
 
 ![Screenshot](https://wdreconcile.toolforge.org/static/screenshot_items.png)
 
@@ -54,7 +49,7 @@ To use it in OpenRefine, you can add the reconciliation service (in the "Start r
 Running manually
 ----------------
 
-It is possible to run this web service locally. You will need Python 3 and a redis instance.
+It is possible to run this web service locally. You will need Python 3.7 or later and a redis instance.
 
 * Clone this repository, either with git (`git clone https://github.com/wetneb/openrefine-wikibase`) or by downloading the repository from Github as an archive
 * It is recommended to set up a virtualenv to isolate the dependencies of the software from the other python packages installed on your computer. On a UNIX system, `virtualenv .venv` and `source .venv/bin/activate` will do. On a Windows system, `python.exe
