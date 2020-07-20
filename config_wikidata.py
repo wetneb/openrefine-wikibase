@@ -65,8 +65,7 @@ wd_api_max_search_results = 50 # need a bot account to get more
 validation_threshold = 95
 
 # Redis client used for caching at various places
-import redis
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+redis_uri = 'redis://localhost:6379/0?encoding=utf-8'
 
 # Redis prefix to use in front of all keys
 redis_key_prefix = 'openrefine_wikidata:'

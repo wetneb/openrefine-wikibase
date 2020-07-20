@@ -108,12 +108,14 @@ async def test_sparql_not_first_for_pid(results, mock_aioresponse):
     results = await results('property', 'P17', lang='en')
     assert (results[0]['name'] == 'country')
 
-async def test_custom_language(preview, mock_aioresponse):
-    assert ('ville' in
-        await preview(id='Q350',lang='fr'))
+async def test_custom_language(preview, mock_aioresponse, test_app):
+    async with test_app.app_context():
+        assert ('ville' in
+            await preview(id='Q350',lang='fr'))
 
-async def test_single_letter(preview, mock_aioresponse):
-    assert ('È' in await preview(id='Q10008', lang='en'))
+async def test_single_letter(preview, mock_aioresponse, test_app):
+    async with test_app.app_context():
+        assert ('È' in await preview(id='Q10008', lang='en'))
 
 async def test_propose_property(propose, mock_aioresponse):
     mock_aioresponse.get('https://query.wikidata.org/sparql?format=json&query=%0ASELECT+?prop+?propLabel+?depth+WHERE+%7B%0ASERVICE+gas:service+%7B%0A++++gas:program+gas:gasClass+%22com.bigdata.rdf.graph.analytics.BFS%22+.%0A++++gas:program+gas:in+wd:Q3918+.%0A++++gas:program+gas:out+?out+.%0A++++gas:program+gas:out1+?depth+.%0A++++gas:program+gas:maxIterations+10+.%0A++++gas:program+gas:maxVisited+100+.%0A++++gas:program+gas:linkType+wdt:P279+.%0A%7D%0ASERVICE+wikibase:label+%7B+bd:serviceParam+wikibase:language+%22fr%22+%7D%0A?out+wdt:P1963+?prop+.%0A%7D%0AORDER+BY+?depth%0ALIMIT+5%0A',

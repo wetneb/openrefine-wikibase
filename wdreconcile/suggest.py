@@ -1,4 +1,4 @@
-from quart import render_template
+from quart import render_template, escape
 import hashlib
 import re
 from string import Template
@@ -119,7 +119,7 @@ class SuggestEngine(object):
         """
         descriptions = item.get('descriptions')
         if lang in descriptions and ' ' in descriptions[lang]:
-            return html_escape(descriptions[lang])
+            return escape(descriptions[lang])
         else:
             return await autodescribe(self.http_session, item['id'], lang)
 
