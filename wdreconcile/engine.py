@@ -255,6 +255,7 @@ class ReconcileEngine(object):
 
             # Compute per-property score
             scored = {}
+            features = {}
             unique_id_found = False
             for prop in properties_with_label:
                 prop_id = prop['pid']
@@ -278,14 +279,14 @@ class ReconcileEngine(object):
 
                 weight = (1.0 if prop_id == 'all_labels'
                           else self.property_weight)
-                scored[prop_id] = {
+                features[prop_id] = {
                     'score': maxscore,
                     'weighted': weight*maxscore,
                 }
 
             # Compute overall score
             sum_scores = sum([
-                prop['weighted'] for pid, prop in scored.items()
+                prop['weighted'] for pid, prop in features.items()
                 ])
             properties_non_unique_ids = len([p for p in properties if not p['unique_id']])
             total_weight = self.property_weight*properties_non_unique_ids + 1.0
@@ -297,7 +298,7 @@ class ReconcileEngine(object):
             else:
                 avg = 0
             scored['score'] = avg
-
+            scored['features'] = [{'id':pid, 'value': value['score']} for pid, value in features.items()]
             scored['id'] = qid
             scored['name'] = await self.item_store.get_label(qid, default_language)
             scored['type'] = current_types
