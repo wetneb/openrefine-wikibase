@@ -6,7 +6,7 @@ services:
       - "8000:8000"
     volumes:
       - type: bind
-        source: ./config_docker.py
+        source: ./config.py
         target: /openrefine-wikibase/config.py
         read_only: true
   redis:
