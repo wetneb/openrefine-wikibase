@@ -120,18 +120,15 @@ async def api(args):
             'suggest' : {
                 'type' : {
                     'service_url' : this_host,
-                    'service_path' : '/%s/suggest/type' % lang,
-                    'flyout_service_path' : '/%s/flyout/type?id=${id}' % lang,
+                    'service_path' : '/%s/suggest/type' % lang
                 },
                 'property' : {
                     'service_url' : this_host,
-                    'service_path' : '/%s/suggest/property' % lang,
-                    'flyout_service_path' : '/%s/flyout/property?id=${id}' % lang,
+                    'service_path' : '/%s/suggest/property' % lang
                 },
                 'entity' : {
                     'service_url' : this_host,
-                    'service_path' : '/%s/suggest/entity' % lang,
-                    'flyout_service_path' : '/%s/flyout/entity?id=${id}' % lang,
+                    'service_path' : '/%s/suggest/entity' % lang
                 }
             },
             'preview' : {
