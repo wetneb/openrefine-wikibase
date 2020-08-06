@@ -13,6 +13,12 @@ from wdreconcile.suggest import SuggestEngine
 from wdreconcile.monitoring import Monitoring
 
 from config import *
+try:
+    from config import wikibase_name
+    from config import wikibase_main_page
+except ImportError:
+    wikibase_name = 'Wikidata'
+    wikibase_main_page = 'https://www.wikidata.org/wiki/Wikidata:Main_Page'
 
 app = Quart(__name__, static_url_path='/static/', static_folder='static/')
 app = cors(app, allow_origin='*')
@@ -312,6 +318,8 @@ async def home():
     context = {
         'service_status_url': this_host+'/monitoring',
         'endpoint_url': this_host+'/en/api',
+        'wikibase_name': wikibase_name,
+        'wikibase_main_page': wikibase_main_page
     }
     return await render_template('index.html', **context)
 
