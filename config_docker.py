@@ -150,7 +150,7 @@ SELECT ?child WHERE { ?child wdt:P279* wd:$qid }
 
 # Sparql query used to fetch all the properties which store unique identifiers
 sparql_query_to_fetch_unique_id_properties = """
-SELECT ?pid WHERE { ?pid wdt:P31/wdt:P279* wd:Q19847637 }
+SELECT ?pid WHRE { ?pid wikibase:propertyType wikibase:ExternalId }
 """
 
 # Sparql query used to propose properties to fetch for items of a given class.
