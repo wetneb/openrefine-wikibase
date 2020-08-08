@@ -62,9 +62,14 @@ class SuggestEngine(object):
         self.store = ItemStore(self.r, http_session)
         self.ft = PropertyFactory(self.store)
         self.store.ttl = 24*60*60 # one day
-        self.image_path = self.ft.parse('|'.join(image_properties))
+        if image_properties:
+            self.image_path = self.ft.parse('|'.join(image_properties))
+        else:
+            self.image_path = None
 
     async def get_image_statements(self, item_value):
+        if not self.image_path:
+            return []
         image_values = await self.image_path.step(item_value)
         return [v.as_string() for v in image_values if not v.is_novalue()]
 
@@ -195,37 +200,37 @@ class SuggestEngine(object):
         for a column reconcilied against a particular type (or none)
         """
         reconciled_type = (args.get('type') or default_type_entity)
-        limit = int(args.get('limit') or 20)
-        limit = min(limit, 50)
-
-        # This SPARQL query uses GAS (don't worry, it's carbon-free)
-        # https://wiki.blazegraph.com/wiki/index.php/RDF_GAS_API
-        # We use GAS rather than a simple property path to
-        # be able to order by depth, so that the most relevant properties
-        # come first.
-
-        property_for_this_type_property
-        sparql_query = Template(sparql_query_to_propose_properties)
-        sparql_query = sparql_query.substitute(
-            base_type=reconciled_type,
-            property_for_this_type=property_for_this_type_property,
-            lang=args['lang'],
-            limit=limit,
-            identifier_space=identifier_space,
-            schema_space=schema_space,
-        )
-        results = await sparql_wikidata(self.http_session, sparql_query)
-        print(results)
-
         properties = []
 
-        for result in results["bindings"]:
-            pid = to_p(result["prop"]["value"])
-            name = result.get('propLabel', {}).get('value') or pid
-            properties.append({
-                'name': name,
-                'id': pid,
-            })
+        if reconciled_type and property_for_this_type_property and sparql_query_to_propose_properties:
+            limit = int(args.get('limit') or 20)
+            limit = min(limit, 50)
+
+            # This SPARQL query uses GAS (don't worry, it's carbon-free)
+            # https://wiki.blazegraph.com/wiki/index.php/RDF_GAS_API
+            # We use GAS rather than a simple property path to
+            # be able to order by depth, so that the most relevant properties
+            # come first.
+
+            sparql_query = Template(sparql_query_to_propose_properties)
+            sparql_query = sparql_query.substitute(
+                base_type=reconciled_type,
+                property_for_this_type=property_for_this_type_property,
+                lang=args['lang'],
+                limit=limit,
+                identifier_space=identifier_space,
+                schema_space=schema_space,
+            )
+            results = await sparql_wikidata(self.http_session, sparql_query)
+
+            for result in results["bindings"]:
+                pid = to_p(result["prop"]["value"])
+                name = result.get('propLabel', {}).get('value') or pid
+                properties.append({
+                    'name': name,
+                    'id': pid,
+                })
+
         if not properties:
             properties.append({
                 'name': 'Qid',

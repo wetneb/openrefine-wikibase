@@ -118,6 +118,14 @@ async def api(args):
         return await g.reconcile.fetch_properties_by_batch(args)
 
     else:
+        default_types = []
+        if default_type_entity:
+            default_types = [
+                {
+                    'id': default_type_entity,
+                    'name': await g.reconcile.item_store.get_label(default_type_entity, lang)
+                }
+            ]
         identify = {
             'name':service_name + (' (%s)' % lang),
             'view':{'url':qid_url_pattern},
@@ -142,12 +150,7 @@ async def api(args):
                 'width' : preview_width,
                 'height': preview_height,
             },
-            'defaultTypes': [
-                {
-                    'id': default_type_entity,
-                    'name': await g.reconcile.item_store.get_label(default_type_entity, lang)
-                }
-            ],
+            'defaultTypes': default_types,
             'extend' : {
                 'propose_properties': {
                     'service_url' : this_host,

@@ -91,7 +91,7 @@ preview_width = 400
 # With which should be requested from Commons for the thumbnail
 thumbnail_width = 130
 
-# All properties to use to get an image
+# All properties to use to get an image. Set to empty list [] if no image properties are available.
 image_properties = [
     'P18',
     'P14',
@@ -129,12 +129,14 @@ autodescribe_endpoint = 'https://tools.wmflabs.org/autodesc/'
 # Property proposal settings
 
 # Default type : entity (Q35120)
+# Set to None if so such item exists.
 default_type_entity = 'Q35120'
 
 # Property path used to obtain the type of an item
 type_property_path = 'P31'
 
-# Property to follow to fetch properties for a given type
+# Property to follow to fetch properties for a given type.
+# Set to None if this is not available
 property_for_this_type_property = 'P1963'
 
 # Optional prefix in front of properties in SPARQL-like property paths
@@ -151,7 +153,8 @@ sparql_query_to_fetch_unique_id_properties = """
 SELECT ?pid WHERE { ?pid wdt:P31/wdt:P279* wd:Q19847637 }
 """
 
-# Sparql query used to propose properties to fetch for items of a given class
+# Sparql query used to propose properties to fetch for items of a given class.
+# Set to None if property proposal should be disabled.
 sparql_query_to_propose_properties = """
 SELECT ?prop ?propLabel ?depth WHERE {
 SERVICE gas:service {
