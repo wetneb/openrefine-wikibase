@@ -2,6 +2,7 @@
 import bottle
 import json
 import time
+import requests
 
 from bottle import route, run, request, default_app, template, HTTPError, abort, HTTPResponse, hook, response
 from docopt import docopt
@@ -78,12 +79,13 @@ def api(args):
         return result
 
     elif queries:
-        queries = json.loads(queries)
-        res = reconcile.process_queries(queries,
-                default_language=lang)
+        # run the queries on the reconci.link endpoint instead
+        r = requests.get(f'https://wikidata.reconci.link/{lang}/api',
+                {'queries': queries})
+        result = r.json()
         processing_time = time.time() - start_time
         monitoring.log_request(len(queries), processing_time)
-        return res
+        return result
 
     elif extend:
         args['extend'] = json.loads(extend)
