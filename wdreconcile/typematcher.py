@@ -55,8 +55,9 @@ class TypeMatcher(object):
     async def _fetch_children(self, qid):
         sparql_query = Template(config.sparql_query_to_fetch_subclasses).substitute(qid=qid)
         results = await sparql_wikidata(self.http_session, sparql_query)
-        return [to_q(result['child']['value'])
+        qids = [to_q(result['child']['value'])
             for result in results["bindings"]]
+        return [qid for qid in qids if qid]
 
     def _key_name(self, qid):
         return ':'.join([self.prefix, qid])
