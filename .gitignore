@@ -6,3 +6,4 @@ build/
 dist/
 *.egg-info/
 config.py
+docs/_build/
