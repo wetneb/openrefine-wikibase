@@ -36,6 +36,23 @@ async def test_label_fallback(item_store, mock_aioresponse):
     label = await item_store.get_label('Q3578062', 'ca')
     assert label == "Escola Nacional d'Administració"
 
+async def test_description_fallback(item_store, mock_aioresponse):
+    mock_aioresponse.get('https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&ids=Q3578062&props=aliases%7Clabels%7Cdescriptions%7Cclaims%7Csitelinks',
+        payload={
+        "entities": {
+        "Q3578062": {
+            "type": "item",
+            "id": "Q3578062",
+            "descriptions": {
+                "es": {
+                    "language": "es",
+                    "value": "Escola Nacional d'Administració"
+                }}
+        }}})
+    # this item does not have a catalan label, so we fall back on another one
+    description = await item_store.get_description('Q3578062', 'ca')
+    assert description == "Escola Nacional d'Administració"
+
 async def test_preferred_rank(item_store_stub):
     """
     The first value in the list should be the preferred rank,
