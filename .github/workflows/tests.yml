@@ -1,6 +1,10 @@
 name: Python tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
   build:
@@ -9,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        python: [ 3.5, 3.8 ]
+        python: [ 3.8 ]
 
     steps:
     - uses: actions/checkout@v2
@@ -27,8 +31,16 @@ jobs:
       run: |
         coverage run --omit=/home/travis/virtualenv/* -m unittest tests
     - name: Coveralls
-      run: coveralls --finish
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+      uses: AndreMiras/coveralls-python-action@develop
+      with:
+        parallel: true
+        flag-name: Unit Test
 
+  coveralls_finish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Finished
+      uses: AndreMiras/coveralls-python-action@develop
+      with:
+        parallel-finished: true

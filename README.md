@@ -1,6 +1,7 @@
 Wikibase reconciliation interface for OpenRefine 
 ================================================
-[![Build Status](https://travis-ci.org/wetneb/openrefine-wikibase.svg?branch=master)](https://travis-ci.org/wetneb/openrefine-wikibase) [![Documentation Status](https://readthedocs.org/projects/openrefine-wikibase/badge/?version=latest)](https://openrefine-wikibase.readthedocs.io/en/latest/?badge=latest) [![Coverage Status](https://coveralls.io/repos/github/wetneb/openrefine-wikidata/badge.svg?branch=master)](https://coveralls.io/github/wetneb/openrefine-wikidata?branch=master)
+i[![Python tests](https://github.com/wetneb/openrefine-wikibase/actions/workflows/tests.yml/badge.svg)](https://github.com/wetneb/openrefine-wikibase/actions/workflows/tests.yml) [![Documentation Status](https://readthedocs.org/projects/openrefine-wikibase/badge/?version=latest)](https://openrefine-wikibase.readthedocs.io/en/latest/?badge=latest) [![Coverage Status](https://coveralls.io/repos/github/wetneb/openrefine-wikidata/badge.svg?branch=master)](https://coveralls.io/github/wetneb/openrefine-wikidata?branch=master)
+
 
 An instance of this endpoint for Wikidata can be found at:
 https://wikidata.reconci.link/en/api
