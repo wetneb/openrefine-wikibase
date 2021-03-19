@@ -1,6 +1,10 @@
 name: Python tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
   build:
@@ -27,8 +31,8 @@ jobs:
       run: |
         coverage run --omit=/home/travis/virtualenv/* -m unittest tests
     - name: Coveralls
-      run: coveralls --finish
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
       
 
