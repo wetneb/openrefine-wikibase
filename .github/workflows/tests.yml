@@ -37,6 +37,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install coveralls==2.1.2 -r requirements.txt
         sed -e 's/ACTUAL_REDIS_PORT/${{ job.services.redis.ports[6379] }}/' < .github/workflows/config.py > config.py
+        cat config.py
     - name: Run tests
       run: |
         coverage run --omit=/opt/hostedtoolcache/Python/* -m pytest
