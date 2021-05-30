@@ -1,5 +1,8 @@
 import pytest
+import re
 from wdreconcile.suggest import SuggestEngine, commons_image_url
+
+from aiohttp import ServerTimeoutError
 
 pytestmark = pytest.mark.asyncio
 
@@ -116,6 +119,12 @@ async def test_custom_language(preview, mock_aioresponse, test_app):
 async def test_single_letter(preview, mock_aioresponse, test_app):
     async with test_app.app_context():
         assert ('È' in await preview(id='Q10008', lang='en'))
+
+async def test_preview_autodesc_down(preview, mock_aioresponse, test_app):
+    mock_aioresponse.get(re.compile(r'https://autodesc\.toolforge\.org/.*'), exception=ServerTimeoutError())
+    async with test_app.app_context():
+        assert ('\u53c2\u4e0e\u5546' in
+            await preview(id='Q4830453', lang='zh'))
 
 async def test_propose_property(propose, mock_aioresponse):
     mock_aioresponse.get('https://query.wikidata.org/sparql?format=json&query=%0ASELECT+?prop+?propLabel+?depth+WHERE+%7B%0ASERVICE+gas:service+%7B%0A++++gas:program+gas:gasClass+%22com.bigdata.rdf.graph.analytics.BFS%22+.%0A++++gas:program+gas:in+wd:Q3918+.%0A++++gas:program+gas:out+?out+.%0A++++gas:program+gas:out1+?depth+.%0A++++gas:program+gas:maxIterations+10+.%0A++++gas:program+gas:maxVisited+100+.%0A++++gas:program+gas:linkType+wdt:P279+.%0A%7D%0ASERVICE+wikibase:label+%7B+bd:serviceParam+wikibase:language+%22fr%22+%7D%0A?out+wdt:P1963+?prop+.%0A%7D%0AORDER+BY+?depth%0ALIMIT+5%0A',

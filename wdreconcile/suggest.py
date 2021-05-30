@@ -1,6 +1,7 @@
 from quart import render_template, escape
 import hashlib
 import re
+from aiohttp import ClientError
 from string import Template
 
 from .itemstore import ItemStore
@@ -49,8 +50,9 @@ async def autodescribe(http_session, qid, lang):
             desc = (await r.json()).get('result', '')
             desc = desc.replace('<a href', '<a target="_blank" href')
             return desc
+    except ClientError as e:
+        return ''
     except ValueError as e:
-        print(e)
         return ''
 
 class SuggestEngine(object):
@@ -126,7 +128,7 @@ class SuggestEngine(object):
         if lang in descriptions and ' ' in descriptions[lang]:
             return escape(descriptions[lang])
         else:
-            return await autodescribe(self.http_session, item['id'], lang)
+            return await autodescribe(self.http_session, item['id'], lang) or descriptions.get(lang) or ''
 
     async def find_something(self, args, typ='item', prefix=''):
         lang = args.get('lang', 'en')

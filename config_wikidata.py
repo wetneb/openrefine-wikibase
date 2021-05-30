@@ -124,7 +124,7 @@ fallback_image_alt = 'Wikidata'
 # Autodescribe endpoint to use.
 # this is used to generate automatic descriptions from item contents.
 # (disable this with: autodescribe_endpoint = None )
-autodescribe_endpoint = 'https://tools.wmflabs.org/autodesc/'
+autodescribe_endpoint = 'https://autodesc.toolforge.org/'
 
 # Property proposal settings
 
