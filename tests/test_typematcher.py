@@ -5,7 +5,8 @@ import re
 pytestmark = pytest.mark.asyncio
 
 async def test_correctness(type_matcher, mock_aioresponse):
-    mock_aioresponse.get('https://query.wikidata.org/sparql?format=json&query=%0ASELECT+?child+WHERE+%7B+?child+wdt:P279*+wd:Q43229+%7D%0A',
+    mock_aioresponse.post('https://query.wikidata.org/sparql?format=json',
+        body={'query':'\nSELECT ?child WHERE { ?child wdt:P279* wd:Q43229 }\n'},
         payload={
         'results':{'bindings':[
             {'child':{'value':'http://www.wikidata.org/entity/Q3918'}},

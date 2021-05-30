@@ -193,7 +193,8 @@ async def test_subfields(resolve):
         [QuantityValue(amount=0)]) # Reference!
 
 async def test_is_unique_identifier(property_factory, mock_aioresponse):
-    mock_aioresponse.get('https://query.wikidata.org/sparql?format=json&query=%0ASELECT+?pid+WHERE+%7B+?pid+wdt:P31/wdt:P279*+wd:Q19847637+%7D%0A',
+    mock_aioresponse.post('https://query.wikidata.org/sparql?format=json',
+        body={'query':'\nSELECT ?pid WHERE { ?pid wdt:P31/wdt:P279* wd:Q19847637 }\n'},
         payload={'results':{'bindings':[
             {'pid':{'value':'http://www.wikidata.org/entity/P3500'}},
             {'pid':{'value':'http://www.wikidata.org/entity/P2427'}},
@@ -226,7 +227,8 @@ def fetch_by_values(property_factory):
     return _fetch_by_values
 
 async def test_fetch_qids_by_values(fetch_by_values, mock_aioresponse):
-    mock_aioresponse.get('https://query.wikidata.org/sparql?format=json&query=%0A++++++++SELECT+?qid+?value%0A++++++++(SAMPLE(COALESCE(?best_label,+?fallback_label))+as+?label)%0A++++++++WHERE+%7B%0A++++++++++++?qid+wdt:P214+?value.%0A++++++++++++VALUES+?value+%7B+%22142129514%22+%7D%0A++++++++++++OPTIONAL+%7B%0A++++++++++++++++?qid+rdfs:label+?best_label+.%0A++++++++++++++++FILTER(LANG(?best_label)+%3D+%22en%22)%0A++++++++++++%7D%0A++++++++++++OPTIONAL+%7B+?qid+rdfs:label+?fallback_label+%7D%0A++++++++%7D%0A++++++++GROUP+BY+?qid+?value%0A++++++++LIMIT+4%0A++++++++',
+    mock_aioresponse.post('https://query.wikidata.org/sparql?format=json',
+        body={'query':'\n        SELECT ?qid ?value\n        (SAMPLE(COALESCE(?best_label, ?fallback_label)) as ?label)\n        WHERE {\n            ?qid wdt:P214 ?value.\n            VALUES ?value { "142129514" }\n            OPTIONAL {\n                ?qid rdfs:label ?best_label .\n                FILTER(LANG(?best_label) = "en")\n            }\n            OPTIONAL { ?qid rdfs:label ?fallback_label }\n        }\n        GROUP BY ?qid ?value\n        LIMIT 4\n        '},
         payload={
         'results':{
         'bindings': [
@@ -241,7 +243,8 @@ async def test_fetch_qids_by_values(fetch_by_values, mock_aioresponse):
         await fetch_by_values('P214', ['142129514']) ==
         {'142129514':[('Q34433', 'University of Oxford')]})
 
-    mock_aioresponse.get('https://query.wikidata.org/sparql?format=json&query=%0A++++++++SELECT+?qid+?value%0A++++++++(SAMPLE(COALESCE(?best_label,+?fallback_label))+as+?label)%0A++++++++WHERE+%7B%0A++++++++++++?qid+(wdt:P214%7Cwdt:P3500)+?value.%0A++++++++++++VALUES+?value+%7B+%22142129514%22+%222167%22+%7D%0A++++++++++++OPTIONAL+%7B%0A++++++++++++++++?qid+rdfs:label+?best_label+.%0A++++++++++++++++FILTER(LANG(?best_label)+%3D+%22en%22)%0A++++++++++++%7D%0A++++++++++++OPTIONAL+%7B+?qid+rdfs:label+?fallback_label+%7D%0A++++++++%7D%0A++++++++GROUP+BY+?qid+?value%0A++++++++LIMIT+8%0A++++++++',
+    mock_aioresponse.post('https://query.wikidata.org/sparql?format=json',
+        body={'query':'\n        SELECT ?qid ?value\n        (SAMPLE(COALESCE(?best_label, ?fallback_label)) as ?label)\n        WHERE {\n            ?qid (wdt:P214|wdt:P3500) ?value.\n            VALUES ?value { "142129514" "2167" }\n            OPTIONAL {\n                ?qid rdfs:label ?best_label .\n                FILTER(LANG(?best_label) = "en")\n            }\n            OPTIONAL { ?qid rdfs:label ?fallback_label }\n        }\n        GROUP BY ?qid ?value\n        LIMIT 8\n        '},
         payload={
         'results':{
             'bindings': [

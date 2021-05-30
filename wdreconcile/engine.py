@@ -77,11 +77,6 @@ class ReconcileEngine(object):
         pid = prop['pid']
         path = self.pf.parse(pid)
         prop['path'] = path
-        val = prop.get('v')
-        try:
-            prop['v'] = str(val['id'])
-        except (TypeError, KeyError):
-            prop['v'] = str(val).strip()
 
         # This indicates whether the property is a unique
         # identifier for the resolved items. If so, we can use it
@@ -149,8 +144,17 @@ class ReconcileEngine(object):
         for query in queries.values():
             for prop in query['properties']:
                 v = prop['v']
-                if prop['unique_id'] and v:
-                    unique_id_values[prop['path']].add(v)
+                if isinstance(v, list):
+                    values_list = v
+                else:
+                    values_list = [v]
+                if prop['unique_id']:
+                    for individual_value in values_list:
+                        if isinstance(individual_value, dict) and 'id' in individual_value:
+                            individual_value = individual_value['id']
+                        individual_value = str(individual_value).strip()
+                        if individual_value:
+                            unique_id_values[prop['path']].add(individual_value)
 
         # Find Qids and labels by primary id
         unique_id_to_qid = {
@@ -260,6 +264,10 @@ class ReconcileEngine(object):
             for prop in properties_with_label:
                 prop_id = prop['pid']
                 ref_val = str(prop['v'])
+                if isinstance(prop['v'], list):
+                    query_values = prop['v']
+                else:
+                    query_values = [prop['v']]
                 path = prop['path']
 
                 maxscore = 0
@@ -268,10 +276,18 @@ class ReconcileEngine(object):
                             ItemValue(id=qid))
 
                 for val in values:
-                    curscore = await val.match_with_str(ref_val, self.item_store)
-                    if curscore > maxscore or bestval is None:
-                        bestval = val
-                        maxscore = curscore
+                    for query_value in query_values:
+                        if isinstance(query_value, dict) and 'id' in query_value:
+                            ref_val = query_value['id']
+                        else:
+                            ref_val = str(query_value)
+                        ref_val = ref_val.strip()
+                        if not ref_val:
+                            continue
+                        curscore = await val.match_with_str(ref_val, self.item_store)
+                        if curscore > maxscore or bestval is None:
+                            bestval = val
+                            maxscore = curscore
 
                 if prop['unique_id'] and maxscore == 100:
                     # We found a match for a unique identifier!
