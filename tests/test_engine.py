@@ -111,6 +111,18 @@ async def test_reconciled_properties(best_score, mock_aioresponse):
         await best_score('Oxford', properties=[{'pid':'P17', 'v':{'id':'Q145'}}]) ==
         100)
 
+async def test_reconciled_properties(best_score, mock_aioresponse):
+    """
+    For issue #113: when multiple property values are provided, take the maximum
+    score per property.
+
+    In this example, only one of the P17 values is correct, but we still get a perfect score
+    """
+    assert (
+        await best_score('Oxford', properties=[{'pid':'P17', 'v':[{'id':'Q145'}, {'id':'Q1234'}]}]) ==
+        100)
+
+
 async def test_shortest_qid_first(best_match_id, mock_aioresponse):
     """
     We could one day want to replace this by something
