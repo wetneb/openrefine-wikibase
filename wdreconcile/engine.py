@@ -83,6 +83,21 @@ class ReconcileEngine(object):
         # to fetch matches, without relying on string search.
         if detect_unique_id:
             prop['unique_id'] = await path.is_unique_identifier()
+
+        # Make sure we have a list of string values in prop['v']
+        if 'v' in prop:
+            v = prop['v']
+            if isinstance(v, list):
+                values_list = v
+            else:
+                values_list = [v]
+            final_values = []
+            for individual_value in values_list:
+                if isinstance(individual_value, dict) and 'id' in individual_value:
+                    individual_value = individual_value['id']
+                final_values.append(str(individual_value).strip())
+            prop['v'] = final_values
+
         return prop
 
     async def fetch_candidate_ids(self, query, unique_id_to_qid, sitelinks_to_qids, default_language):
@@ -90,9 +105,10 @@ class ReconcileEngine(object):
         primary_qids_and_labels = []
         for prop in query['properties']:
             if prop['unique_id']:
-                primary_qids_and_labels += unique_id_to_qid.get(
-                    prop['path'], {}).get(
-                    prop['v'], [])
+                for prop_value in prop['v']:
+                    primary_qids_and_labels += unique_id_to_qid.get(
+                        prop['path'], {}).get(
+                        prop_value, [])
 
         if primary_qids_and_labels:
             # for now we're throwing away the labels
@@ -144,15 +160,8 @@ class ReconcileEngine(object):
         for query in queries.values():
             for prop in query['properties']:
                 v = prop['v']
-                if isinstance(v, list):
-                    values_list = v
-                else:
-                    values_list = [v]
                 if prop['unique_id']:
-                    for individual_value in values_list:
-                        if isinstance(individual_value, dict) and 'id' in individual_value:
-                            individual_value = individual_value['id']
-                        individual_value = str(individual_value).strip()
+                    for individual_value in v:
                         if individual_value:
                             unique_id_values[prop['path']].add(individual_value)
 
@@ -220,7 +229,7 @@ class ReconcileEngine(object):
         # Add the label as "yet another property"
         properties_with_label = properties + [{
             'pid':'all_labels',
-            'v':query['query'],
+            'v':[query['query']],
             'path':self.pf.make_empty(),
             'unique_id':False
         }]
@@ -263,11 +272,6 @@ class ReconcileEngine(object):
             unique_id_found = False
             for prop in properties_with_label:
                 prop_id = prop['pid']
-                ref_val = str(prop['v'])
-                if isinstance(prop['v'], list):
-                    query_values = prop['v']
-                else:
-                    query_values = [prop['v']]
                 path = prop['path']
 
                 maxscore = 0
@@ -276,15 +280,10 @@ class ReconcileEngine(object):
                             ItemValue(id=qid))
 
                 for val in values:
-                    for query_value in query_values:
-                        if isinstance(query_value, dict) and 'id' in query_value:
-                            ref_val = query_value['id']
-                        else:
-                            ref_val = str(query_value)
-                        ref_val = ref_val.strip()
-                        if not ref_val:
+                    for query_value in prop['v']:
+                        if not query_value:
                             continue
-                        curscore = await val.match_with_str(ref_val, self.item_store)
+                        curscore = await val.match_with_str(query_value, self.item_store)
                         if curscore > maxscore or bestval is None:
                             bestval = val
                             maxscore = curscore

@@ -17,6 +17,8 @@ Global matching formula
 The score of each candidate is obtained as a weighted sum of the scores of individual features. It ranges from 0 to 100.
 When no candidates can be found matching the target type, candidates of wrong or no types are also returned, with their score divided by two.
 
+For each supplied property, all query values are matched against reference values and the maximum matching score of all pairs is used as the similarity score for this property.
+
 Name matching
 -------------
 
