@@ -6,6 +6,8 @@ i[![Python tests](https://github.com/wetneb/openrefine-wikibase/actions/workflow
 An instance of this endpoint for Wikidata can be found at:
 https://wikidata.reconci.link/en/api
 
+This endpoint is described in the paper ["Running a reconciliation service for Wikidata", Antonin Delpeuch](http://ceur-ws.org/Vol-2773/paper-17.pdf).
+
 This is a new reconciliation interface, with the following features:
 * Matching columns with Wikibase properties, to improve the fuzzy
   matching score ;
