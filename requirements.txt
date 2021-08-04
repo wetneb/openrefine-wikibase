@@ -1,4 +1,4 @@
-aioredis
+aioredis==1.3
 aiohttp
 aiodns
 aioresponses
