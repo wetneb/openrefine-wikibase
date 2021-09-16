@@ -128,6 +128,7 @@ async def api(args):
             ]
         identify = {
             'name':service_name + (' (%s)' % lang),
+            'versions': ['0.1', '0.2'],
             'view':{'url':qid_url_pattern},
             'identifierSpace': identifier_space,
             'schemaSpace': schema_space,

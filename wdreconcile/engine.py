@@ -316,6 +316,7 @@ class ReconcileEngine(object):
             scored['features'] = [{'id':pid, 'value': value['score']} for pid, value in features.items()]
             scored['id'] = qid
             scored['name'] = await self.item_store.get_label(qid, default_language)
+            scored['description'] = await self.item_store.get_description(qid, default_language)
             scored['type'] = current_types
             types_to_prefetch |= set(scored['type'])
             scored['match'] = False # will be changed later

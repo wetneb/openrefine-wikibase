@@ -35,6 +35,13 @@ class ItemStore(object):
         item = await self.get_item(qid)
         return language_fallback(item.get('labels', {}), lang) or qid
 
+    async def get_description(self, qid, lang):
+        """
+        Shortcut to get the description of an item for a specific language
+        """
+        item = await self.get_item(qid)
+        return language_fallback(item.get('descriptions', {}), lang)
+
     async def get_items(self, qids, force=False):
         """
         Fetch minified items from the Wikidata API, or retrieve them
