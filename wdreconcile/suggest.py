@@ -1,4 +1,5 @@
-from quart import render_template, escape
+from quart import render_template
+from markupsafe import escape
 import hashlib
 import re
 from aiohttp import ClientError

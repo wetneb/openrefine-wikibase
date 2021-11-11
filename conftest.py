@@ -26,11 +26,9 @@ async def http_session():
 
 @pytest.fixture
 async def redis_client():
-    redis = await aioredis.create_redis_pool(redis_uri)
+    redis = aioredis.from_url(redis_uri, encoding='utf-8', decode_responses=True)
     await redis.flushdb()
     yield redis
-    redis.close()
-    await redis.wait_closed()
 
 @pytest.fixture
 def mock_aioresponse():

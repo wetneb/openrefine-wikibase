@@ -25,7 +25,7 @@ app = cors(app, allow_origin='*')
 
 @app.before_serving
 async def setup():
-    app.redis_client = await aioredis.create_redis_pool(redis_uri)
+    app.redis_client = aioredis.from_url(redis_uri, encoding='utf-8', decode_responses=True)
     app.http_connector = aiohttp.TCPConnector(limit_per_host=10)
     app.http_session_obj = aiohttp.ClientSession(connector=app.http_connector)
     app.http_session = await app.http_session_obj.__aenter__()
