@@ -48,6 +48,7 @@ It is possible to run this web service locally. You will need Python 3.7 or late
 * Clone this repository, either with git (`git clone https://github.com/wetneb/openrefine-wikibase`) or by downloading the repository from Github as an archive
 * It is recommended to set up a virtualenv to isolate the dependencies of the software from the other python packages installed on your computer. On a UNIX system, `python3 -m venv .venv` and `source .venv/bin/activate` will do. On a Windows system, `python.exe
   -m venv venvname` followed by `venvname\Scripts\activate` should work.
+* Install Python3 development packages (libpython3-dev on Debian based systems)
 * Install the Python dependencies with `pip install -r requirements.txt`
 * Copy the configuration file provided: `cp config_wikidata.py config.py` (`copy config_wikidata.py config.py` on Windows)
 * Edit the configuration file `config.py` so that `redis_client` contains the correct settings to access your redis instance. The default parameters should be fine if you are running redis locally on the default port.
