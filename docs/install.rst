@@ -52,14 +52,48 @@ It is possible to run this web service locally. You will need Python 3.7 or late
 * Install the Python dependencies with `pip install -r requirements.txt`
 * Copy the configuration file provided: `cp config_wikidata.py config.py` (`copy config_wikidata.py config.py` on Windows)
 * Edit the configuration file `config.py` so that `redis_client` contains the correct settings to access your redis instance. The default parameters should be fine if you are running redis locally on the default port.
-* Finally, run the instance with `python app.py`. The service will be available at `http://localhost:8000/en/api`.
+* Finally, run the instance with `python app.py` (for development purposes). The service will be available at `http://localhost:8000/en/api`.
 
 On Debian-based systems, it looks as follows::
 
-   sudo apt-get install git redis-server python3 virtualenv
+   sudo apt install git redis-server python3 virtualenv libpython3-dev
    git clone https://github.com/wetneb/openrefine-wikibase
    cd openrefine-wikibase
    python3 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
 
+
+Deploying in production
+-----------------------
+
+To run this service in production, we recommend using `gunicorn` in conjunction with `uvicorn`. Those packages can be installed in the same virtual environment as the code, with `pip install gunicorn uvicorn`.
+
+The web service can then be run with `gunicorn app:app -b localhost:8080 --workers 4 --worker-class uvicorn.workers.UvicornWorker`.
+
+Since this process needs to keep running, you should deploy it appropriately, for instance in a Kubernetes pod or as a systemd service. Here is an example systemd service configuration file, stored in `/etc/systemd/system/wdrecon.conf`::
+
+   [Unit]
+   Description=Wikidata reconciliation service
+   After=network.target
+   
+   [Service]
+   Type=simple
+   User=wdrecon
+   Group=wdrecon
+   Restart=always
+   EnvironmentFile=-/etc/default/wdrecon
+   WorkingDirectory=/home/wdrecon/openrefine-wikibase/
+   ExecStart=/bin/sh -c '${WDRECON_GUNICORN_BIN} app:app -b localhost:8080 --workers ${WDRECON_WORKERS} --worker-class uvicorn.workers.UvicornWorker'
+   
+   [Install]
+   WantedBy=multi-user.target
+
+
+This is accompanied by the following environment file, stored at `/etc/default/wdrecon`::
+
+   WDRECON_GUNICORN_BIN="/home/wdrecon/venv/bin/gunicorn"
+   WDRECON_WORKERS="4"
+
+
+For the Wikidata service, we run multiple instances of such a gunicorn server, gathered together behind an Apache load balancer.
