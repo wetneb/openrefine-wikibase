@@ -543,6 +543,7 @@ class SitelinkPath(PropertyPath):
         sitelink = (item.get('sitelinks') or {}).get(self.site)
         if sitelink:
             return [IdentifierValue(value=sitelink)]
+        return []
 
     def __str__(self, add_prefix=False):
         return 'S'+self.site
