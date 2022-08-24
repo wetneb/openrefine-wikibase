@@ -97,3 +97,11 @@ This is accompanied by the following environment file, stored at `/etc/default/w
 
 
 For the Wikidata service, we run multiple instances of such a gunicorn server, gathered together behind an Apache load balancer.
+
+Tips about Redis configuration
+------------------------------
+
+If you are in a position to configure the Redis instance you are using, then you can do the following:
+* disable snapshots of the Redis instance to disk, because this software only uses Redis as a cache which can be completely lost;
+* set a maximum memory limit of your liking, together with an eviction policy (such as LRU), so that the redis instance does not eat up more memory than reasonable on your server.
+
