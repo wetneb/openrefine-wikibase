@@ -104,6 +104,5 @@ Tips about Redis configuration
 If you are in a position to configure the Redis instance you are using, then you can do the following:
 
 * Disable snapshots of the Redis instance to disk, because this software only uses Redis as a cache which can be completely lost. This can be done by commenting out all the `save` lines in `redis.conf`;
-* Set a maximum memory limit of your liking, together with an eviction policy (such as LRU), so that the redis instance does not eat up more memory than reasonable on your server. This can be done in `redis.conf` by adding directives such as `maxmemory
-3gb` and `maxmemory-policy volatile-lru`.
+* Set a maximum memory limit of your liking, together with an eviction policy (such as LRU), so that the redis instance does not eat up more memory than reasonable on your server. This can be done in `redis.conf` by adding directives such as `maxmemory 3gb` and `maxmemory-policy volatile-lru`.
 
