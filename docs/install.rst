@@ -71,7 +71,7 @@ To run this service in production, we recommend using `gunicorn` in conjunction 
 
 The web service can then be run with `gunicorn app:app -b localhost:8080 --workers 4 --worker-class uvicorn.workers.UvicornWorker`.
 
-Since this process needs to keep running, you should deploy it appropriately, for instance in a Kubernetes pod or as a systemd service. Here is an example systemd service configuration file, stored in `/etc/systemd/system/wdrecon.conf`::
+Since this process needs to keep running, you should deploy it appropriately, for instance in a Kubernetes pod or as a systemd service. Here is an example systemd service configuration file, stored in `/etc/systemd/system/wdrecon.service`::
 
    [Unit]
    Description=Wikidata reconciliation service
@@ -102,6 +102,8 @@ Tips about Redis configuration
 ------------------------------
 
 If you are in a position to configure the Redis instance you are using, then you can do the following:
-* disable snapshots of the Redis instance to disk, because this software only uses Redis as a cache which can be completely lost;
-* set a maximum memory limit of your liking, together with an eviction policy (such as LRU), so that the redis instance does not eat up more memory than reasonable on your server.
+
+* Disable snapshots of the Redis instance to disk, because this software only uses Redis as a cache which can be completely lost. This can be done by commenting out all the `save` lines in `redis.conf`;
+* Set a maximum memory limit of your liking, together with an eviction policy (such as LRU), so that the redis instance does not eat up more memory than reasonable on your server. This can be done in `redis.conf` by adding directives such as `maxmemory
+3gb` and `maxmemory-policy volatile-lru`.
 
