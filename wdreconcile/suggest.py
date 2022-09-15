@@ -228,6 +228,8 @@ class SuggestEngine(object):
 
             for result in results["bindings"]:
                 pid = to_p(result["prop"]["value"])
+                if not pid: # https://github.com/wetneb/openrefine-wikibase/issues/145
+                    continue
                 name = result.get('propLabel', {}).get('value') or pid
                 properties.append({
                     'name': name,
