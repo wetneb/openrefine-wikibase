@@ -6,7 +6,7 @@ asynctest==0.13.0 # required for aioresponses with Python < 3.8.
 pytest==6.2.5
 pytest-mock==3.6.1
 pytest-asyncio==0.16.0
-quart==0.16.0
+quart==0.20.0
 quart-cors==0.5.0
 docopt==0.6.2
 fuzzywuzzy==0.18.0
