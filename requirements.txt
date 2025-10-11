@@ -1,5 +1,5 @@
 aioredis==2.0.0
-aiohttp==3.8.0
+aiohttp==3.12.14
 aiodns==3.0.0
 aioresponses==0.7.2
 asynctest==0.13.0 # required for aioresponses with Python < 3.8.
